@@ -1,14 +1,15 @@
-# German state LiDAR bulk download
+# German state geodata bulk download
 
-Scripts to bulk-download the open LiDAR geodata of German states and convert it to
+Scripts to bulk-download the open geodata of German states and convert it to
 cloud-optimized formats.
 
-| State | Downloader | Datasets | Publisher |
-|-------|------------|----------|-----------|
-| **Rheinland-Pfalz (RLP)** | `download_rlp_lidar.sh` | `las`, `dgm1` | LVermGeo RLP |
-| **Baden-Württemberg (BW)** | `download_bw_lidar.sh` | `dgm1` | LGL BW |
+| Data | Downloader | Coverage |
+|------|------------|----------|
+| **LiDAR / terrain** | `download_rlp_lidar.sh` (`las`, `dgm1`) · `download_bw_lidar.sh` (`dgm1`) | Rheinland-Pfalz, Baden-Württemberg |
+| **ALKIS (cadastre)** | `download_alkis.sh <state>` | 15 of 16 states |
 
-Both feed the same converter (`convert_to_cloud_optimized.sh`) and the same output tree.
+Both LiDAR downloaders feed the same converter (`convert_to_cloud_optimized.sh`) and the
+same output tree.
 
 # Rheinland-Pfalz
 
@@ -118,6 +119,83 @@ JOBS=12 CONN=4 ./download_bw_lidar.sh dgm1   # tune parallelism
 Grid cells are named `<easting_km>-<northing_km>` of the SW corner, with **odd** eastings and
 **even** northings (e.g. `517-5424`) — `BBOX` is inclusive on both ends.
 
+# ALKIS — the cadastre, all states
+
+`download_alkis.sh` pulls **ALKIS** (*Amtliches Liegenschaftskatasterinformationssystem* —
+parcels, building footprints, land use) for any German state that publishes it openly.
+Owner names are never open data; every state releases only the *ohne Eigentümer* (oE) variant.
+
+**No state requires a login for what this script downloads.** Per-state status,
+licenses and the three content gaps are tabulated in
+[`bundeslaender.md`](bundeslaender.md#alkis--cadastral-open-data-per-state).
+
+```bash
+brew install aria2          # or: apt install aria2
+
+./download_alkis.sh --list                   # every state key + its datasets
+./download_alkis.sh nw                       # NRW, NAS, ~25 GB -> ./alkis/nw
+./download_alkis.sh nw gpkg                  # NRW, simplified GeoPackage (much smaller)
+./download_alkis.sh bw shape /mnt/big        # -> /mnt/big/bw
+
+DRY_RUN=1 ./download_alkis.sh th             # file count + size estimate, download nothing
+JOBS=12 CONN=4 ./download_alkis.sh bb        # tune parallelism
+PAGE=50000 ./download_alkis.sh ni            # page size for the WFS/OGC-API states
+```
+
+## What each state gives you
+
+| Key | State | Datasets (default first) | Unit | Statewide size |
+|-----|-------|--------------------------|------|----------------|
+| `bw` | Baden-Württemberg | `nas`, `shape` | Gemarkung (~3,380) | ~23 GB |
+| `by` | Bayern | `tn`, `hausumringe`, `verwaltung` | statewide / Bezirk | ~5.4 GB (`tn`) |
+| `be` | Berlin | `flurstuecke`, `gebaeude` | WFS pages | ~403k parcels |
+| `bb` | Brandenburg | `nas`, `shape` | Landkreis (18) | ~4 GB |
+| `hb` | Bremen | `flurstuecke` | one GetFeature | small |
+| `hh` | Hamburg | `gml` | statewide, quarterly | ~0.46 GB |
+| `he` | Hessen | `flurstuecke`, `zoning` | OGC API pages | ~5.0 M parcels |
+| `mv` | Mecklenburg-Vorpommern | `nas` | Gemeinde (~1,450 files) | — |
+| `ni` | Niedersachsen | `flurstueck`, `gebaeude` | WFS pages | ~6.3 M parcels |
+| `nw` | Nordrhein-Westfalen | `nas`, `gpkg` | Kreis (53) | ~25 GB |
+| `rp` | Rheinland-Pfalz | `lika`, `hu` | 1 km tile (20,511) | ~31 GB |
+| `sl` | Saarland | `nas`, `shape` | Landkreis (7) | ~2.1 GB |
+| `sn` | Sachsen | `nas` | statewide | one ZIP |
+| `sh` | Schleswig-Holstein | `geojson` | statewide | ~243 MB |
+| `th` | Thüringen | `shape`, `nas` | Flur (~16,500) | ~1.2 GB |
+| `st` | Sachsen-Anhalt | — | — | **not published** |
+
+`bw`, `by` and `rp` come with a caveat printed at run time — Bayern publishes no open vector
+parcels and RLP only a rasterised cadastral map. `st` exits with an explanation rather than
+pretending there is something to fetch.
+
+## How it works
+
+There is no shared national interface, so the script carries one plan per state and four
+download engines:
+
+| Engine | States | Mechanism |
+|--------|--------|-----------|
+| `aria2` | `bw` `by` `bb` `hh` `mv` `nw` `sl` `sn` `sh` `th` | build a file list, hand it to `aria2c` |
+| `metalink` | `rp` | official `.meta4` with per-file **SHA-256** → `aria2c --check-integrity` |
+| `wfs2` | `be` `ni` | WFS 2.0 paged with `COUNT`/`STARTINDEX` → one GML per page |
+| `wfs1` | `hb` | WFS 1.1 has no standard paging; Bremen fits in one request |
+| `ogcapi` | `he` | OGC API Features, follow `rel="next"` → one GeoJSON per page |
+
+The file lists are **never hard-coded** — they are rebuilt on every run from whatever each
+state publishes as its index:
+
+- **BW** draws its Gemarkung grid as **Mapbox vector tiles** carrying a JSON blob with each
+  cell's download URLs — the same trick as its LiDAR 2×2 km grid, so `download_bw_lidar.sh`
+  and `download_alkis.sh` share the stdlib-only MVT reader.
+- **NRW** serves a machine-readable XML index per product folder.
+- **BB** is a plain Apache directory listing.
+- **MV** and **TH** publish standards-compliant **INSPIRE ATOM** feeds.
+- **HH** is queried through the transparency portal's **CKAN API**, so the newest quarterly
+  snapshot is picked automatically rather than pinned.
+- **SL** is a password-less public **Nextcloud** share, listed over WebDAV `PROPFIND`.
+
+Only RLP publishes checksums, so only `rp` is hash-verified; everywhere else downloads are
+parallel, resumable (`--continue`) and size-checked.
+
 # Convert to cloud-optimized formats
 
 `convert_to_cloud_optimized.sh` turns the downloaded tiles into streamable formats:
@@ -204,3 +282,22 @@ unpacking (`KEEP=0` deletes the zip after all four convert cleanly).
 - Download grid (vector tiles + bounds): `https://opengeodata.lgl-bw.de/tiles/vts/2x2Gitter/{z}/{x}/{y}.pbf`,
   <https://opengeodata.lgl-bw.de/tiles/vts/2x2Gitter/metadata.json>
 - DGM1 metadata record: <https://metadaten.geoportal-bw.de/geonetwork/srv/api/records/8ca22d63-e92d-4ca1-879e-68f62978b21a>
+
+**ALKIS** (one per state, all verified live July 2026)
+
+- BW: <https://opengeodata.lgl-bw.de> · grid `tiles/vts/Gemarkungen/{z}/{x}/{y}.pbf`, files `/data/alkis/`
+- BY: product catalogue <https://geodaten.bayern.de/opengeodata/json/opengeodata_produkte.json>
+- BE: <https://gdi.berlin.de/services/wfs/alkis_flurstuecke> · <https://daten.berlin.de>
+- BB: <https://data.geobasis-bb.de/geobasis/daten/alkis/Vektordaten/>
+- HB: <https://geodienste.bremen.de/wfs_hduk2958loah3976niun> · <https://www.geo.bremen.de/produkte/open-data-produktuebersicht-15654>
+- HH: <https://suche.transparenz.hamburg.de/api/3/action/package_search?q=title:ALKIS%20Liegenschaftskarte>
+- HE: <https://www.geoportal.hessen.de/spatial-objects/710> · portal <https://hvbg.hessen.de/geoinformation/open-data>
+- MV: <https://www.geodaten-mv.de/dienste/alkis_nas_atom>
+- NI: <https://opendata.lgln.niedersachsen.de/doorman/noauth/alkis_wfs_nas>
+- NW: <https://www.opengeodata.nrw.de/produkte/geobasis/lk/akt/>
+- RP: <https://geobasis-rlp.de/data/lika/current/meta4/> · product config <https://geoshop.rlp.de/files/anpassungen/hvd/products/lika.json>
+- SL: <https://www.shop.lvgl.saarland.de/cloud/freiegeobasisdaten>
+- SN: <https://www.geodaten.sachsen.de/downloadbereich-alkis-4176.html>
+- ST: <https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html> (ALKIS **not** included)
+- SH: <https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/dl-alkis.html>
+- TH: <https://geoportal.geoportal-th.de/dienste/atom_th_alkis>
