@@ -1,2 +1,6 @@
 # Downloaded data — rebuilt from the sources by the download_* scripts, never committed.
-rlp_lidar/
+# DRY_RUN writes here too: each downloader spools its index and aria2 input list before it
+# decides whether to transfer anything.
+*_lidar/
+samples/
+alkis/
