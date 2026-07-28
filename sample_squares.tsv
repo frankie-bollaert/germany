@@ -1,0 +1,30 @@
+# 5x5 km sample squares — one per Bundesland.
+#
+# Each square is aligned to the UTM kilometre grid in the state's OWN CRS, so it lands
+# exactly on the 1 km tile boundaries the LiDAR products use (no partial tiles).
+# CRS per state follows bundeslaender.md: 25833 for BB/BE/MV/SN, 25832 everywhere else.
+#
+# Placement rule (chosen 2026-07-28): the three city-states sample their capital, because
+# there is no other choice; the other 13 sample terrain worth exercising a DGM with, biased
+# toward locations that still contain real settlement so the cadastre layer is not empty.
+#
+# Tab-separated, 5 fields: key<TAB>epsg<TAB>bbox<TAB>place<TAB>why
+# bbox is minE,minN,maxE,maxN in UTM kilometres — the same interface the LiDAR downloaders
+# already take as BBOX="minE,minN,maxE,maxN".
+#
+be	25833	390,5818,395,5823	Berlin-Mitte	capital (city-state)
+hb	25832	485,5879,490,5884	Bremen	capital (city-state)
+hh	25832	564,5932,569,5937	Hamburg	capital (city-state)
+bw	25832	476,5471,481,5476	Heidelberg	Neckar valley to Koenigstuhl, ~110->570 m
+by	25832	656,5260,661,5265	Garmisch-Partenkirchen	Alps, Zugspitze massif
+bb	25833	427,5745,432,5750	Luebbenau	Spreewald canal parcels
+he	25832	421,5535,426,5540	Ruedesheim	Rhine gorge, terraced vineyard parcels
+mv	25833	410,6046,415,6051	Sassnitz	Jasmund chalk cliffs, Baltic coast
+ni	25832	596,5750,601,5755	Goslar	Harz edge, UNESCO old town
+nw	25832	371,5613,376,5618	Koenigswinter	Siebengebirge above the Rhine
+rp	25832	407,5553,412,5558	St. Goarshausen	Loreley gorge
+sl	25832	320,5484,325,5489	Mettlach	Saarschleife meander
+sn	25833	439,5639,444,5644	Bad Schandau	Saechsische Schweiz sandstone gorge
+st	25832	616,5738,621,5743	Wernigerode	Harz, Brocken side
+sh	25832	453,6083,458,6088	Westerland	Sylt dunes and coastline
+th	25832	591,5646,596,5651	Eisenach	Wartburg, Thueringer Wald
