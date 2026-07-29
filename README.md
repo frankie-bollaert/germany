@@ -63,13 +63,29 @@ its `.png`, same image as vector, with a per-state tooltip the PNG cannot carry.
 
 ## Why the other eleven fall short
 
-| ID | State | Missing | Detail |
-|----|-------|---------|--------|
-| **RP** | Rheinland-Pfalz | plots | Everything else is present and RP is the best-engineered source in the repo (Metalink-4 with SHA-256 for LiDAR *and* Hausumringe) — but the cadastre is published as a **rasterised** Liegenschaftskarte. No bulk vector parcels; geometry only per-query via the Flurstückssuche WFS. |
-| **BY** | Bayern | plots | Same single gap: ALKIS-Parzellarkarte is raster-only, vector parcels are sold through GeodatenOnline. Hausumringe are open (CC BY 4.0); Hauskoordinaten are priced. |
-| **BW** | Baden-Württemberg | point cloud | Full ALKIS + HU + HK, 125 GB of DGM1 — but the `3DM` point cloud is flagged inactive and every URL 404s. |
-| **NI** | Niedersachsen | point cloud | STAC exposes `dgm1` only. Cadastre and footprints are fine (`gebaeude` WFS); the standalone HK/HU products are priced. |
-| **TH**, **SH**, **ST**, **HE**, **HH**, **HB**, **SL** | — | point cloud + DTM | No anonymous bulk LiDAR endpoint found — portals, CAPTCHAs and order clients, not access restrictions. Their cadastre and footprints are fine. |
+Same columns as above, so the gaps line up. ✅ available and scripted · ⚠️ open but no bulk
+endpoint found · ❌ not published as open data.
+
+| ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
+|----|-------|-------------|------------|--------------------|------------------|
+| **RP** | Rheinland-Pfalz | ✅ `download_rlp_lidar.sh` † | ✅ same | ❌ **raster only** — `lika` GeoTIFF Liegenschaftskarte; vector geometry only per-query via the Flurstückssuche WFS | ✅ `download_alkis.sh rp hu` — ZIP + `.meta4`, HK the same way |
+| **BY** | Bayern | ✅ `download_by_lidar.sh` | ✅ same | ❌ **raster only** — ALKIS-Parzellarkarte; vector parcels sold through GeodatenOnline | ✅ `… by hausumringe` — Shape ×7 Bezirke, CC BY 4.0 (HK priced) |
+| **BW** | Baden-Württemberg | ❌ `3DM` flagged inactive, every URL 404s | ✅ `download_bw_lidar.sh` — ~125 GB | ✅ `download_alkis.sh bw` — NAS/Shape, ~3,380 Gemarkungen | ✅ inside that package; also standalone HU + HK ZIPs |
+| **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
+| **TH** | Thüringen | ⚠️ `gaialight` app, inventory not derivable | ⚠️ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK CAPTCHA-gated) |
+| **ST** | Sachsen-Anhalt | ⚠️ Atom advertised but not locatable; UI caps at 5 tiles | ⚠️ same | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
+| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ✅ `download_alkis.sh sh` — statewide GeoJSON, ~243 MB | ⚠️ HU/HK only through the interactive download client |
+| **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
+| **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
+| **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
+| **SL** | Saarland | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh sl` — NAS/Shape, 7 Landkreise | ✅ inside that package (standalone HU is INSPIRE WFS only) |
+
+Every one of the eleven has open, scriptable **parcels**. The gaps cluster: RP and BY are a
+single content gap each — a rasterised cadastre, with everything else in place. BW and NI
+publish no point cloud at all, so there is nothing further to fetch however you ask. The
+remaining seven fail on elevation delivery — portals, CAPTCHAs and order clients, not access
+restrictions — and four of them (SH, HE, HH, HB) additionally have no scriptable standalone
+footprint product.
 
 ## Fetching all four today
 
