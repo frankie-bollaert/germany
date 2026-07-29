@@ -23,6 +23,7 @@
 #
 # Usage : ./download_all.sh [group] [root]
 #   ./download_all.sh alkis            # 29 ALKIS combinations   -> ./alkis/<state>-<dataset>
+#   ./download_all.sh cadastre         # only what holds parcels or building footprints
 #   ./download_all.sh dgm1             # 9 terrain models        -> ./lidar/<state>-dgm1
 #   ./download_all.sh las              # 7 point clouds          -> ./lidar/<state>-las
 #   ./download_all.sh lidar            # dgm1 + las
@@ -32,6 +33,14 @@
 # Env vars:
 #   ONLY=nw,bw,rp    restrict to these states (repo IDs, comma-separated)
 #   SKIP=rp,by       drop these states
+#   WANT=parcels,buildings
+#                    keep only products holding one of these: parcels, buildings, landuse,
+#                    admin, zoning, raster, terrain, pointcloud. `cadastre` is shorthand for
+#                    the ALKIS group with WANT=parcels,buildings. A product that bundles
+#                    every object class survives any of these — see the matrix below.
+#   FORMAT=simple    where a state offers both, take one: `nas` (full exchange format) or
+#                    `simple` (vereinfacht/Shape/GPKG). Unset takes both, which downloads
+#                    the same content twice for bw, bb, nw, sl and th.
 #   DRY_RUN=1        passed through — every sub-script prints its plan and downloads nothing
 #   JOBS=8 CONN=4    passed through
 #   PAGE, MAX_PAGES  passed through to the ALKIS WFS/OGC-API states
@@ -44,67 +53,93 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GROUP="${1:-}"
-ROOT="${2:-.}"
 KEEP_GOING="${KEEP_GOING:-1}"
 DRY_RUN="${DRY_RUN:-0}"
 
 # ---------------------------------------------------------------------------- the matrix
 #
-# family  state  dataset  rough size (verified 2026-07; "?" = the source publishes no
-#                         Content-Length, so it cannot be estimated without downloading)
+# family  state  dataset  size  content  format
 #
-# ALKIS sizes are bytes on disk for the file-based states, feature counts for the five
-# service-only states (be, hb, he, ni, st) which stream from a WFS or OGC API instead.
+# size    verified 2026-07; "?" = the source publishes no Content-Length, so it cannot be
+#         estimated without downloading. ALKIS sizes are bytes on disk for the file-based
+#         states and feature counts for the five service-only states (be, hb, he, ni, st),
+#         which stream from a WFS or OGC API rather than shipping files.
+#
+# content what the product actually holds, for WANT=. Only nine of the sixteen ALKIS states
+#         let you ask for parcels or buildings on their own — the rest ship every object
+#         class in one package, marked "more", and can only be narrowed after download.
+#         Verified by inspection, not inferred from the portal wording: the NRW GeoPackage
+#         carries Flurstueck, GebauedeBauwerk, Nutzung, KatasterBezirk, VerwaltungsEinheit.
+#
+# format  nas = the full exchange format; simple = a vereinfacht/Shape/GPKG export of the
+#         same content, smaller and easier to read but with attributes and history dropped
+#         (see README "Full NAS vs. vereinfacht"). "-" = the state offers no choice.
 #
 MATRIX="$(cat <<'EOF'
-alkis bw nas          22.7G
-alkis bw shape        20.4G
-alkis by tn            5.4G
-alkis by hausumringe   0.7G
-alkis by verwaltung    0.1G
-alkis be flurstuecke   403k_feat
-alkis be gebaeude      784k_feat
-alkis bb nas           4.0G
-alkis bb shape         1.6G
-alkis hb flurstuecke   small
-alkis hh gml           0.5G
-alkis he flurstuecke   5.0M_feat
-alkis he zoning         43k_feat
-alkis mv nas           1448_files
-alkis ni flurstueck    6.3M_feat
-alkis ni gebaeude      6.5M_feat
-alkis nw nas          25.3G
-alkis nw gpkg          8.9G
-alkis rp lika         30.7G
-alkis rp hu            1.6G
-alkis sl nas           2.1G
-alkis sl shape         0.5G
-alkis sn nas           ?
-alkis sh geojson       0.24G
-alkis st flurstueck    2.7M_feat
-alkis st gebaeude      1.7M_feat
-alkis st nutzung       2.3M_feat
-alkis th shape         1.2G
-alkis th nas           6.5G
-lidar bb dgm1           41G
-lidar bb las           1.4T
-lidar be dgm1          0.2G
-lidar be las           ?
-lidar bw dgm1          134G
-lidar by dgm1          217G
-lidar by las           ?T
-lidar mv dgm1          ?
-lidar mv las           ?
-lidar ni dgm1          ?
-lidar nw dgm1           79G
-lidar nw las           3.5T
-lidar rp dgm1           33G
-lidar rp las           5.2T
-lidar sn dgm1          ?
-lidar sn las           ?
+alkis bw nas          22.7G       parcels,buildings,more  nas
+alkis bw shape        20.4G       parcels,buildings,more  simple
+alkis by tn            5.4G       landuse                 -
+alkis by hausumringe   0.7G       buildings               -
+alkis by verwaltung    0.1G       admin                   -
+alkis be flurstuecke   403k_feat  parcels                 -
+alkis be gebaeude      784k_feat  buildings               -
+alkis bb nas           4.0G       parcels,buildings,more  nas
+alkis bb shape         1.6G       parcels,buildings,more  simple
+alkis hb flurstuecke   small      parcels                 -
+alkis hh gml           0.5G       parcels,buildings,more  -
+alkis he flurstuecke   5.0M_feat  parcels                 -
+alkis he zoning         43k_feat  zoning                  -
+alkis mv nas           1448_files parcels,buildings,more  -
+alkis ni flurstueck    6.3M_feat  parcels                 -
+alkis ni gebaeude      6.5M_feat  buildings               -
+alkis nw nas          25.3G       parcels,buildings,more  nas
+alkis nw gpkg          8.9G       parcels,buildings,more  simple
+alkis rp lika         30.7G       raster                  -
+alkis rp hu            1.6G       buildings               -
+alkis sl nas           2.1G       parcels,buildings,more  nas
+alkis sl shape         0.5G       parcels,buildings,more  simple
+alkis sn nas           ?          parcels,buildings,more  -
+alkis sh geojson       0.24G      parcels,buildings       -
+alkis st flurstueck    2.7M_feat  parcels                 -
+alkis st gebaeude      1.7M_feat  buildings               -
+alkis st nutzung       2.3M_feat  landuse                 -
+alkis th shape         1.2G       parcels,buildings,more  simple
+alkis th nas           6.5G       parcels,buildings,more  nas
+lidar bb dgm1           41G       terrain                 -
+lidar bb las           1.4T       pointcloud              -
+lidar be dgm1          0.2G       terrain                 -
+lidar be las           ?          pointcloud              -
+lidar bw dgm1          134G       terrain                 -
+lidar by dgm1          217G       terrain                 -
+lidar by las           ?T         pointcloud              -
+lidar mv dgm1          ?          terrain                 -
+lidar mv las           ?          pointcloud              -
+lidar ni dgm1          ?          terrain                 -
+lidar nw dgm1           79G       terrain                 -
+lidar nw las           3.5T       pointcloud              -
+lidar rp dgm1           33G       terrain                 -
+lidar rp las           5.2T       pointcloud              -
+lidar sn dgm1          ?          terrain                 -
+lidar sn las           ?          pointcloud              -
 EOF
 )"
+
+# Warnings that only make sense once a combination has actually been selected.
+note_for() {  # note_for <state> <dataset> <content>
+  case "$1 $2" in
+    "sh geojson")
+      echo "ALKIS_SH_Massendownload.geojson is an INDEX, not the cadastre: one polygon per Flur,"
+      echo "each carrying a LINK_DATA URL to that Flur's NAS .xml.gz. The parcels and buildings"
+      echo "are behind those links — this fetches the index only. See README, Schleswig-Holstein."
+      return ;;
+  esac
+  case "$3" in
+    *,more)
+      echo "bundled: the source ships every ALKIS object class in one package, so parcels and"
+      echo "buildings cannot be requested on their own. Narrow it after download instead —"
+      echo "e.g. ogr2ogr -f GPKG out.gpkg in.gpkg Flurstueck GebauedeBauwerk" ;;
+  esac
+}
 
 # LiDAR is only published by 9 states, and two of those publish no point cloud at all:
 # Baden-Württemberg's 3DM product is flagged inactive (every URL 404s) and Niedersachsen's
@@ -130,10 +165,17 @@ in_csv() {  # in_csv <needle> <csv>   — empty csv never matches
   return 1
 }
 
-selected() {  # selected <family> <state> <dataset>
-  local fam="$1" st="$2" ds="$3"
+overlaps() {  # overlaps <csv-a> <csv-b> — true if they share any element
+  local x parts
+  IFS=, read -r -a parts <<<"$1"
+  for x in "${parts[@]}"; do in_csv "$x" "$2" && return 0; done
+  return 1
+}
+
+selected() {  # selected <family> <state> <dataset> <content> <format>
+  local fam="$1" st="$2" ds="$3" content="$4" fmt="$5"
   case "$GROUP" in
-    alkis) [[ "$fam" == "alkis" ]] || return 1 ;;
+    alkis|cadastre) [[ "$fam" == "alkis" ]] || return 1 ;;
     lidar) [[ "$fam" == "lidar" ]] || return 1 ;;
     dgm1)  [[ "$fam" == "lidar" && "$ds" == "dgm1" ]] || return 1 ;;
     las)   [[ "$fam" == "lidar" && "$ds" == "las"  ]] || return 1 ;;
@@ -141,6 +183,11 @@ selected() {  # selected <family> <state> <dataset>
   esac
   in_csv "$st" "${SKIP:-}" && return 1
   [[ -n "${ONLY:-}" ]] && { in_csv "$st" "$ONLY" || return 1; }
+  # Keep a product if it holds any of what was asked for. A bundle holds parcels and
+  # buildings among other things, so it survives WANT=parcels — there is no finer choice.
+  [[ -n "$WANT" ]] && { overlaps "$content" "$WANT" || return 1; }
+  # "-" means the state offers no format choice, so it is never filtered out by FORMAT.
+  [[ -n "${FORMAT:-}" && "$fmt" != "-" && "$fmt" != "$FORMAT" ]] && return 1
   return 0
 }
 
@@ -149,37 +196,74 @@ usage() {
   exit 2
 }
 
+# Arguments in any order, so that a stray --list can never be mistaken for the output root
+# and start a multi-terabyte download into a directory named "--list".
+GROUP=""
+ROOT=""
+LIST_ONLY=0
+for a in "$@"; do
+  case "$a" in
+    --list) LIST_ONLY=1 ;;
+    -*)     echo "ERROR: unknown option '$a'" >&2; usage ;;
+    *)      if [[ -z "$GROUP" ]]; then GROUP="$a"; elif [[ -z "$ROOT" ]]; then ROOT="$a"
+            else echo "ERROR: unexpected argument '$a'" >&2; usage; fi ;;
+  esac
+done
+ROOT="${ROOT:-.}"
+# --list with no group lists every family; it matches no case in selected(), so nothing is cut.
+[[ "$LIST_ONLY" == 1 && -z "$GROUP" ]] && GROUP="--list"
+
 case "$GROUP" in
   alkis|lidar|dgm1|las|all) : ;;
+  cadastre) : ;;   # shorthand: ALKIS, restricted to what holds parcels or building footprints
   --list) : ;;
   *) usage ;;
 esac
+
+WANT="${WANT:-}"
+[[ "$GROUP" == "cadastre" && -z "$WANT" ]] && WANT="parcels,buildings"
 
 # ---------------------------------------------------------------------------- walk
 
 PLAN=""
 N=0
-while read -r FAM ST DS SIZE; do
+while read -r FAM ST DS SIZE CONTENT FMT; do
   [[ -n "$FAM" ]] || continue
-  # --list matches no family case below, so it lists everything — but still honours ONLY/SKIP.
-  selected "$FAM" "$ST" "$DS" || continue
-  PLAN="$PLAN$FAM $ST $DS $SIZE"$'\n'
+  # --list matches no family case below, so it lists everything — but still honours the filters.
+  selected "$FAM" "$ST" "$DS" "$CONTENT" "$FMT" || continue
+  PLAN="$PLAN$FAM $ST $DS $SIZE $CONTENT $FMT"$'\n'
   N=$((N + 1))
 done <<<"$MATRIX"
 
-if [[ "$GROUP" == "--list" ]]; then
-  printf '%-6s %-5s %-12s %-10s %s\n' family state dataset size destination
-  printf '%-6s %-5s %-12s %-10s %s\n' ------ ----- ------------ ---------- -----------
-  while read -r FAM ST DS SIZE; do
+if [[ "$LIST_ONLY" == 1 || "$GROUP" == "--list" ]]; then
+  printf '%-6s %-5s %-12s %-10s %-22s %-6s %s\n' family state dataset size content format destination
+  printf '%-6s %-5s %-12s %-10s %-22s %-6s %s\n' ------ ----- ------------ ---------- ---------------------- ------ -----------
+  while read -r FAM ST DS SIZE CONTENT FMT; do
     [[ -n "$FAM" ]] || continue
-    printf '%-6s %-5s %-12s %-10s %s\n' "$FAM" "$ST" "$DS" "${SIZE//_/ }" "$ROOT/$FAM/$ST-$DS"
+    printf '%-6s %-5s %-12s %-10s %-22s %-6s %s\n' \
+      "$FAM" "$ST" "$DS" "${SIZE//_/ }" "$CONTENT" "$FMT" "$ROOT/$FAM/$ST-$DS"
   done <<<"$PLAN"
+  # Total only what is actually measurable: "?" and feature counts are reported separately
+  # rather than folded in as zero, which would understate the selection.
+  echo "$PLAN" | awk '
+    /^[a-z]/ {
+      n++
+      if ($4 ~ /G$/)      { gb += $4 + 0 }
+      else if ($4 ~ /T$/) { gb += ($4 + 0) * 1024 }
+      else                { unmeasured++ }
+    }
+    END {
+      printf "\n%d product(s) selected", n
+      if (gb)         printf ", ~%.1f GB of files", gb
+      if (unmeasured) printf ", plus %d streamed or unmeasured source(s)", unmeasured
+      printf "\n"
+    }'
   cat <<'EOF'
+Sizes were measured live in 2026-07. "?" means the source serves no Content-Length; feature
+counts mark the ALKIS states that publish a service rather than files.
 
-Sizes are as measured live in 2026-07. "?" means the source serves no Content-Length.
-Feature counts mark the five ALKIS states that publish services, not files.
-
-Roughly: alkis ~132 GB + 23 M streamed features · dgm1 ~600 GB · las 12 TB and up.
+"parcels,buildings,more" is a bundle — every ALKIS object class in one package. It cannot be
+narrowed at the source, only after download.
 EOF
   exit 0
 fi
@@ -198,7 +282,7 @@ fi
 OK=0
 FAILED=0
 i=0
-while read -r FAM ST DS SIZE; do
+while read -r FAM ST DS SIZE CONTENT FMT; do
   [[ -n "$FAM" ]] || continue
   i=$((i + 1))
   dest="$ROOT/$FAM/$ST-$DS"
@@ -209,7 +293,8 @@ while read -r FAM ST DS SIZE; do
   fi
 
   echo
-  echo "--- [$i/$N] $FAM $ST $DS  (~${SIZE//_/ })  -> $dest"
+  echo "--- [$i/$N] $FAM $ST $DS  (~${SIZE//_/ }, $CONTENT)  -> $dest"
+  note_for "$ST" "$DS" "$CONTENT" | sed 's/^/    NOTE: /' 
   if [[ ! -x "$HERE/$script" ]]; then
     echo "    MISSING: $HERE/$script" | tee -a "$FAILLOG"
     FAILED=$((FAILED + 1)); continue

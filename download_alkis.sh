@@ -32,11 +32,15 @@
 #   sl   Saarland                 full oE, per Landkreis    anon    WebDAV -> zip (NAS/Shape)
 #   sn   Sachsen                  full oE, statewide        anon    single zip (NAS)
 #   st   Sachsen-Anhalt           full oE (vereinfacht)     anon    WFS 2.0 (no file dumps)
-#   sh   Schleswig-Holstein       full oE, statewide        anon    single GeoJSON
+#   sh   Schleswig-Holstein       INDEX ONLY — one polygon   anon    single GeoJSON
+#                                 per Flur, each linking that
+#                                 Flur's NAS; the cadastre
+#                                 itself is behind the links
 #   th   Thüringen                full oE, per Flur         anon    ATOM -> zip (Shape/NAS)
 #
 # No state requires a login for the data this script fetches. Two states are incomplete at
-# the source (by, rp) — see README.md.
+# the source (by, rp) and one is incomplete here (sh: the index is fetched, not the NAS it
+# points at) — see README.md.
 #
 # Usage : ./download_alkis.sh <state> [dataset] [output_dir]
 #   ./download_alkis.sh nw                  # NRW, NAS, -> ./alkis/nw
@@ -94,7 +98,7 @@ nw     nas, gpkg                     full ALKIS oE, one zip per Kreis (53)
 rp     lika, hu                      raster cadastral map / Hausumringe (no vector ALKIS)
 sl     nas, shape                    full ALKIS oE, one zip per Landkreis (7)
 sn     nas                           full ALKIS oE, one statewide zip
-sh     geojson                       statewide Massendownload GeoJSON (~243 MB)
+sh     geojson                       Flur INDEX (~243 MB) — links to the NAS, not the NAS
 th     shape, nas                    full ALKIS oE, one zip per Flur (~9k)
 st     flurstueck, gebaeude,         ALKIS-vereinfacht WFS, statewide (~2.7 M parcels)
        nutzung
@@ -510,7 +514,10 @@ plan_sh() {
   [[ "$DATASET" == "geojson" ]] || { echo "ERROR: sh dataset is: geojson" >&2; exit 2; }
   ENGINE=aria2
   ATTRIB="© GeoBasis-DE/LVermGeo SH, CC BY 4.0"
-  echo "    statewide Massendownload (~243 MB GeoJSON)"
+  echo "    statewide Massendownload index (~243 MB GeoJSON)"
+  echo "    NOTE: this is an INDEX, not the cadastre — one polygon per Flur, each carrying a"
+  echo "          LINK_DATA URL to that Flur's NAS .xml.gz. Parcels and buildings are behind"
+  echo "          those links; fetching them is a second pass this script does not yet make."
   emit "https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=ALKIS_SH_Massendownload.geojson&id=4" \
        "ALKIS_SH_Massendownload.geojson"
 }

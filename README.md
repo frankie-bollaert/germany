@@ -49,6 +49,59 @@ ONLY=nw,bw ./download_all.sh alkis       # two states only
 SKIP=by,rp ./download_all.sh alkis       # drop the two states with no vector Flurstücke
 ```
 
+## Only parcels and building footprints
+
+`cadastre` is the ALKIS group narrowed to products that hold parcels or building footprints,
+and `FORMAT=` picks one of the two exports where a state publishes both:
+
+```bash
+FORMAT=simple ./download_all.sh cadastre --list   # 19 products, ~35.6 GB
+FORMAT=nas    ./download_all.sh cadastre          # same 19, full NAS instead: ~63.6 GB
+              ./download_all.sh alkis             # everything ALKIS: 29 products, ~132.4 GB
+```
+
+Restricting is only partly the downloader's decision — most states do not offer the choice:
+
+| How the state publishes | States | What you can ask for |
+|-------------------------|--------|----------------------|
+| Separate endpoint per object class | BE, NI, ST | Parcels and footprints, each on its own |
+| Separate endpoint, parcels only | HB, HE | Parcels; no footprint endpoint in these two |
+| Standalone footprint product only | BY (`hausumringe`), RP (`hu`) | Footprints; neither publishes open vector parcels |
+| One package, every object class | BW, BB, HH, MV, NW, SL, SN, TH | Nothing narrower than the whole package |
+
+For that last group the restriction has to happen after the download, not during it:
+
+```bash
+ogr2ogr -f GPKG parcels_buildings.gpkg 202601_gru_vereinf_05114000_Krefeld_EPSG25832.gpkg \
+        Flurstueck GebauedeBauwerk
+```
+
+Those layer names are from the NRW GeoPackage, which carries `Flurstueck`, `FlurstueckPunkt`,
+`GebauedeBauwerk`, `KatasterBezirk`, `Nutzung`, `NutzungFlurstueck` and `VerwaltungsEinheit` —
+five of the seven layers are not parcels or footprints. In full NAS the equivalent classes are
+`AX_Flurstueck` and `AX_Gebaeude`.
+
+What `WANT=` drops outright: BY's `tn` (land use, 5.4 GB) and `verwaltung`, HE's `zoning`,
+ST's `nutzung`, and RP's `lika` — a 30.7 GB rasterised cadastral map, the single largest
+saving. `FORMAT=` then drops the duplicate export for BW, BB, NW, SL and TH, which is another
+~37 GB of the same content in a second file format.
+
+### Schleswig-Holstein is a two-step source
+
+`download_alkis.sh sh` fetches `ALKIS_SH_Massendownload.geojson`, and despite the name that
+file is an **index, not the cadastre**: one polygon per Flur, each feature carrying a
+`LINK_DATA` URL to that Flur's NAS `.xml.gz`.
+
+```json
+{ "GEMARKUNG": "Ellhöft", "FLUR": "015515003", "DATUM": "2026-07-10",
+  "LINK_DATA": ".../massen.php?file=015515003.xml.gz&id=1&live=07_2026" }
+```
+
+Fetching one of those packages confirms the cadastre is behind the link — Flur `015515003`
+carries 88 `AX_Flurstueck` and 2 `AX_Gebaeude`. So SH parcels and footprints need a second
+pass over the index that `download_alkis.sh` does not yet make; `download_all.sh` prints this
+caveat when it selects the state.
+
 One flat directory per product is not just tidiness. The four ALKIS states served by a WFS or
 OGC API (BE, HE, NI, ST) page their output into `part-00001.gml` whatever dataset was asked
 for, so two of their datasets sharing a directory would overwrite each other silently. The
@@ -109,7 +162,7 @@ endpoint found · ❌ not published as open data.
 | **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **TH** | Thüringen | ⚠️ `gaialight` app, inventory not derivable | ⚠️ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK CAPTCHA-gated) |
 | **ST** | Sachsen-Anhalt | ⚠️ Atom advertised but not locatable; UI caps at 5 tiles | ⚠️ same | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
-| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ✅ `download_alkis.sh sh` — statewide GeoJSON, ~243 MB | ⚠️ HU/HK only through the interactive download client |
+| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ⚠️ `download_alkis.sh sh` fetches the **Flur index** (~243 MB); the NAS is behind its `LINK_DATA` links | ⚠️ HU/HK only through the interactive download client |
 | **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
 | **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
@@ -256,7 +309,7 @@ HTTP with no credentials.
 | **SL** | Saarland | ✅ full (oE) | **anonymous** | public WebDAV share | NAS, Shape · Landkreis (7) | DL-DE/BY 2.0 |
 | **SN** | Sachsen | ✅ full (oE) | **anonymous** | single ZIP | NAS · statewide | DL-DE/BY 2.0 |
 | **ST** | Sachsen-Anhalt | ✅ vereinfacht (oE) | **anonymous** | WFS 2.0 only | GML · statewide (~2.7 M parcels) | DL-DE/BY 2.0 |
-| **SH** | Schleswig-Holstein | ✅ full (oE) | **anonymous** | single file | GeoJSON · statewide (~243 MB) | CC BY 4.0 |
+| **SH** | Schleswig-Holstein | ✅ full (oE), but two-step | **anonymous** | index file → per-Flur NAS | GeoJSON index (~243 MB) → `.xml.gz` per Flur | CC BY 4.0 |
 | **TH** | Thüringen | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | Shape, NAS · Flur (~16,500) | DL-DE/BY 2.0 |
 
 ## What each state gives you
@@ -278,7 +331,7 @@ What `download_alkis.sh` actually fetches, per state:
 | `rp` | Rheinland-Pfalz | `lika`, `hu` | 1 km tile (20,511) | ~31 GB |
 | `sl` | Saarland | `nas`, `shape` | Landkreis (7) | ~2.1 GB |
 | `sn` | Sachsen | `nas` | statewide | one ZIP |
-| `sh` | Schleswig-Holstein | `geojson` | statewide | ~243 MB |
+| `sh` | Schleswig-Holstein | `geojson` | statewide index | ~243 MB (index only) |
 | `th` | Thüringen | `shape`, `nas` | Flur (~16,500) | ~1.2 GB |
 | `st` | Sachsen-Anhalt | `flurstueck`, `gebaeude`, `nutzung` | WFS pages | ~2.7 M parcels |
 
