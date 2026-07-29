@@ -9,6 +9,7 @@ found, not because the data is gated.
 |------|------------|----------|
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
+| **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
 
@@ -23,6 +24,40 @@ then, and every script recomputes them at runtime (`DRY_RUN=1`).
 1. [Complete coverage — all four datasets](#1-complete-coverage--all-four-datasets)
 2. [LiDAR / terrain availability](#2-lidar--terrain-availability)
 3. [ALKIS / cadastre availability](#3-alkis--cadastre-availability)
+
+---
+
+# Downloading everything
+
+The per-state scripts each take one state and one dataset. `download_all.sh` walks the whole
+matrix — 29 ALKIS combinations across 16 states, 16 LiDAR combinations across 9 — into one
+state-major tree:
+
+```
+<root>/alkis/<id>-<dataset>/      ./alkis/nw-nas, ./alkis/bw-shape, ./alkis/st-flurstueck
+<root>/lidar/<id>-<dataset>/      ./lidar/nw-dgm1, ./lidar/rp-las
+```
+
+```bash
+./download_all.sh --list                 # the matrix, its sizes, and where each part lands
+./download_all.sh alkis                  # 29 combinations, ~132 GB + 23 M streamed features
+./download_all.sh dgm1                   # 9 terrain models, ~600 GB
+./download_all.sh all /mnt/big           # everything, including 12 TB+ of point cloud
+
+DRY_RUN=1 ./download_all.sh all          # every sub-script prints its plan, downloads nothing
+ONLY=nw,bw ./download_all.sh alkis       # two states only
+SKIP=by,rp ./download_all.sh alkis       # drop the two states with no vector Flurstücke
+```
+
+One flat directory per product is not just tidiness. The four ALKIS states served by a WFS or
+OGC API (BE, HE, NI, ST) page their output into `part-00001.gml` whatever dataset was asked
+for, so two of their datasets sharing a directory would overwrite each other silently. The
+`<id>-<dataset>` leaf makes that impossible.
+
+A failing combination is logged to `<root>/.download_all.failures` and the walk continues;
+re-running the same command retries it and resumes everything else. The only change this makes
+to the per-state scripts is `OUTDIR=` — set it yourself and any of them writes straight into
+the path you give instead of appending its own subdirectory.
 
 ---
 
@@ -89,11 +124,14 @@ footprint product.
 
 ## Fetching all four today
 
-There is no single command for it. `download_samples.sh` drives only the LiDAR side, because
-`download_alkis.sh` has no `BBOX` support — parcels and footprints are per-state or
-per-package until that lands. For one of the five states, the full set is:
+Whole-state, `download_all.sh` covers it — `ONLY=<id> ./download_all.sh all` fetches every
+dataset that state publishes. What has no single command is a *sample*: `download_samples.sh`
+drives only the LiDAR side, because `download_alkis.sh` has no `BBOX` support, so parcels and
+footprints stay per-state or per-package until that lands. For one of the five states:
 
 ```bash
+ONLY=<id> ./download_all.sh all                 # all four datasets, statewide volumes
+# or, one product at a time:
 ./download_<id>_lidar.sh both ./samples/<id>    # point cloud + terrain
 ./download_alkis.sh <id>                        # parcels + building footprints
 ```

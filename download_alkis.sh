@@ -46,6 +46,8 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<state>.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   PAGE=10000       features per request for the WFS/OGC-API states (be, hb, he, ni)
 #   MAX_PAGES=0      stop after N pages (0 = all); handy for sampling a big WFS
 #
@@ -106,7 +108,7 @@ EOF
 STATE="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
 DATASET="${2:-}"
 OUTROOT="${3:-./alkis}"
-DIR="$OUTROOT/$STATE"
+DIR="${OUTDIR:-$OUTROOT/$STATE}"
 LIST="$DIR/.files.aria2"
 
 need() {

@@ -4,3 +4,5 @@
 *_lidar/
 samples/
 alkis/
+lidar/
+.download_all.failures

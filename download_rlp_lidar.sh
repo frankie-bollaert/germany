@@ -25,6 +25,9 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #
 set -euo pipefail
 
@@ -49,7 +52,7 @@ command -v aria2c >/dev/null 2>&1 || {
 }
 
 fetch_one() {
-  local key="$1" url dir="$OUTROOT/$1"
+  local key="$1" url dir="${OUTDIR:-$OUTROOT/$1}"
   url="$(meta_url "$1")"
   echo "==> $key"
   echo "    manifest: $url"
