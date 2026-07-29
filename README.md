@@ -10,6 +10,7 @@ found, not because the data is gated.
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
 | **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
+| **ALKIS → DuckDB tables** | `alkis_to_duckdb.sh` | [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) |
 | **LiDAR, sample squares only** | `download_samples.sh` | [A 5×5 km square per state](#lidar-for-the-sample-squares-only) |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
@@ -25,6 +26,9 @@ then, and every script recomputes them at runtime (`DRY_RUN=1`).
 1. [Complete coverage — all four datasets](#1-complete-coverage--all-four-datasets)
 2. [LiDAR / terrain availability](#2-lidar--terrain-availability)
 3. [ALKIS / cadastre availability](#3-alkis--cadastre-availability)
+
+Once the ALKIS data is down, [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) turns it
+into `plots`, `structures` and `structure_versions`.
 
 ---
 
@@ -112,6 +116,99 @@ A failing combination is logged to `<root>/.download_all.failures` and the walk 
 re-running the same command retries it and resumes everything else. The only change this makes
 to the per-state scripts is `OUTDIR=` — set it yourself and any of them writes straight into
 the path you give instead of appending its own subdirectory.
+
+---
+
+# Loading ALKIS into DuckDB
+
+`alkis_to_duckdb.sh` turns what the downloaders left under `./alkis` into three tables in a
+DuckDB database. It downloads nothing — it only reads what is already on disk, so it can be
+run against a partial tree and re-run as more arrives.
+
+```bash
+brew install gdal duckdb      # or: apt install gdal-bin duckdb
+
+./alkis_to_duckdb.sh --list                  # what is on disk and what it would produce
+./alkis_to_duckdb.sh                         # everything -> ./alkis.duckdb
+STATES="be nw" ./alkis_to_duckdb.sh          # two states only
+KINDS=plots  ./alkis_to_duckdb.sh            # parcels only, skip the footprints
+JOBS=8 ./alkis_to_duckdb.sh /mnt/big/germany.duckdb
+```
+
+| Table | One row per | Filled from |
+|-------|-------------|-------------|
+| `plots` | Flurstück | BE, BW, NW |
+| `structures` | building footprint identity | BE, BW, BY, NW |
+| `structure_versions` | footprint geometry, `→ structures.id` | the same four |
+
+Four of the sixteen states are wired up, because those are the four whose ALKIS is both
+downloaded here and carries vector parcels or footprints: `be-flurstuecke` / `be-gebaeude`
+(paged GML), `bw-shape` (zipped Shapefile per Gemarkung), `by-hausumringe` (zipped Shapefile
+per Bezirk) and `nw` (GeoPackage per Kreis). Deliberately not loaded: `bw-nas` (the same
+content as `bw-shape`, but NAS needs a GFS schema mapping), `by-tn` (land use — neither
+parcels nor footprints) and `st` (never fetched). Bayern contributes **no plots at all**,
+which is the content gap described in [The two content gaps](#the-two-content-gaps).
+
+## Staging is what makes it resumable
+
+Every source is a different format in a different CRS, so each file is first converted by
+`ogr2ogr` into GeoParquet — EPSG:4326, WKB, `MULTIPOLYGON`, geometry column renamed to `geom`
+so the load SQL is source-agnostic — under `./alkis/.duckdb-stage/<state>-<kind>/`. DuckDB
+then reads each dataset as one parquet glob.
+
+A staged `.parquet` is never rebuilt, so an interrupted run resumes at the file it stopped on,
+and the load itself is idempotent: `plots` and `structures` are keyed on
+`(local_id, local_id_region)` and `structure_versions` on `(structure_id, valid_from)`, all
+inserted `ON CONFLICT DO NOTHING`. **You can run this while `download_all.sh` is still
+downloading** — files that aria2c still holds a `.aria2` control file for, or that were
+touched in the last `SETTLE=60` seconds, are skipped rather than half-read. Re-run when the
+download finishes and only the new files are converted.
+
+`KEEP_STAGE=0` deletes each dataset's staging once it has loaded, at the cost of that
+resumability. Staging the full tree costs roughly 8 GB.
+
+## What goes in which column
+
+`local_id` is the AAA object identifier **exactly as the state publishes it** — `oid` in NW
+and BW (a 16-character id plus a two-character object-type suffix, `FL` for Flurstück, `BL`
+for Bauwerk), `uuid` in BE. `local_id_region` and `region` are both the state ID, which makes
+the pair unique nationwide. Bayern's Hausumringe carry no identifier of any kind, so one is
+synthesised from the source file stem and the feature id (`091_Oberbayern_Hausumringe:1722464`);
+it is stable for as long as the source file is.
+
+Everything not mapped to a column of its own lands in `plots.metadata` as JSON, under German
+key names (`flurstueckskennzeichen`, `gemarkungsschluessel`, `lagebezeichnung`, …) plus a
+`quelle` naming the product it came from.
+
+Two columns need a fallback. `area` uses the *amtliche Fläche* the cadastre states (`flaeche`,
+`afl`); where that is missing or zero it falls back to `ST_Area_Spheroid` of the geometry.
+`valid_from` uses the source's own date (`aktualit`, `beg`), but **Berlin's `gebaeude` layer
+and Bayern's Hausumringe carry no date at all** — those get a dataset-level snapshot date, the
+newest source file's mtime, which for a fresh download is when the state served it. Override
+with `FALLBACK_DATE=`.
+
+## The DuckDB translation of the PostGIS schema
+
+- `geometry(Polygon,4326)` becomes plain `GEOMETRY`: DuckDB's spatial type carries no typmod,
+  so the *Polygon* and *4326* parts are enforced by the script instead. `ogr2ogr` does the
+  reprojection, and single-part `MULTIPOLYGON`s are unwrapped to `POLYGON`. Genuinely
+  multi-part parcels — 0.6% of NW — stay `MULTIPOLYGON` and are counted in the run summary.
+- `jsonb` becomes `JSON`.
+- The `structures` table's `tableoid`/`cmax`/`xmax`/`cmin`/`xmin`/`ctid` columns are PostgreSQL
+  *system* columns that leaked into the dump. They have no DuckDB equivalent and are omitted.
+- Two `UNIQUE` constraints are added that the dump does not have: `structures
+  (local_id, local_id_region)`, needed to find a structure when attaching its versions, and
+  `structure_versions (structure_id, valid_from)`, which is what makes a re-run idempotent
+  instead of duplicating every version row.
+
+An `ingest_log` table records rows read, rows kept and multi-part count per dataset, and the
+run prints it at the end. Rows are dropped only for a null or empty geometry, or for a
+duplicate `local_id` within the same dataset — 1,285 of BW's 6.53 M footprints, nothing
+anywhere else.
+
+Geometry is passed through as the cadastre drew it, not repaired: 68 of 13.6 M parcels fail
+`ST_IsValid` (self-intersections in the source). Run them through `ST_MakeValid` if your
+consumer needs OGC-valid input.
 
 ---
 

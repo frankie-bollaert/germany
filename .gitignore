@@ -6,3 +6,9 @@ samples/
 alkis/
 lidar/
 .download_all.failures
+
+# Derived from that data by alkis_to_duckdb.sh — rebuildable, so never committed either.
+# (Its GeoParquet staging lives under alkis/.duckdb-stage/, already covered above.)
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp/
