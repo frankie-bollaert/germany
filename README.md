@@ -55,9 +55,10 @@ makes it the natural smoke test for a full four-dataset pipeline. **BB** carries
 its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,291-tile DGM1
 grid, released campaign by campaign.
 
-The map is drawn by [`coverage_map.py`](coverage_map.py) from `bundeslaender.geojson`, so it
-follows the data rather than this table. Regenerate both maps with `./coverage_map.py all`
-after any coverage change; `coverage_map.svg` / `alkis_map.svg` are the same images as vector.
+This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
+`bundeslaender.geojson`, so they follow the data rather than these tables. Regenerate all
+three with `./coverage_map.py all` after any coverage change; each also has an `.svg` beside
+its `.png`, same image as vector, with a per-state tooltip the PNG cannot carry.
 
 ## Why the other eleven fall short
 
@@ -88,7 +89,13 @@ per-package until that lands. For one of the five states, the full set is:
 The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
 whether you have to click through an interactive portal.
 
-Legend: ✅ available and scripted · ⚠️ open but no bulk endpoint found · ❌ not published.
+<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SN) for point cloud plus terrain, orange (BW, NI) for terrain only, red (HB, HE, HH, SH, SL, ST, TH) for open data with no bulk endpoint" width="560">
+
+Green is the seven states with both products scripted; orange is BW and NI, which are scripted
+but publish no point cloud; red is the seven that publish elevation openly but only through a
+portal. Regenerate with `./coverage_map.py lidar`.
+
+Legend below: ✅ available and scripted · ⚠️ open but no bulk endpoint found · ❌ not published.
 
 | ID | State | Point cloud | DTM (DGM1) | Bulk downloader | CRS | Licence |
 |----|-------|:-----------:|:----------:|-----------------|-----|---------|

@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
-"""Draw this repo's per-state coverage as maps. Two of them, same geometry, same three tiers.
+"""Draw this repo's per-state coverage as maps. Three of them, same geometry, same three tiers.
 
-README.md answers these questions in prose and tables; this puts the same
-answers on geometry, so a glance replaces a table read.
+One per section of README.md, which answers the same questions in prose and tables; these put
+the answers on geometry, so a glance replaces a table read.
 
   coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
             green  all four are scriptable today                                        (5)
             orange elevation works, but one of the four is missing at the source         (4)
             red    no bulk LiDAR endpoint at all -- these states are cadastre-only       (7)
 
+  lidar     what elevation can a script actually fetch in bulk?
+            green  point cloud + terrain                                                 (7)
+            orange terrain only -- the state publishes no point cloud                    (2)
+            red    open, but no bulk endpoint -- interactive portal only                 (7)
+
   alkis     what does the state's cadastre actually contain?
             green  full vector ALKIS ohne Eigentuemer                                   (13)
             orange raster cadastral map only -- a picture of the parcels, not geometry   (2)
             red    not open data                                                         (1)
 
-Red on the coverage map is about elevation, not about the state being useless: every red
-state except ST still publishes ALKIS openly. The legend says so, because "not supported"
-would be wrong. Orange on the alkis map is likewise not a delivery problem -- BY and RP
-publish their cadastre as raster, so the download works and the geometry simply is not in it.
+Red never means "closed" except on the alkis map. All 16 states publish elevation openly, so
+the lidar map's red tier is about delivery mechanics -- portals, CAPTCHAs, order clients --
+and the coverage map's red tier is the same states seen through the four-dataset question.
+Orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
+as raster, so the download works and the geometry simply is not in it. The legends say so,
+because "not supported" would be wrong in every one of those cases.
 
 Inputs are read from bundeslaender.geojson's own properties (lidar_las, lidar_dgm1,
 lidar_script, alkis, alkis_engine, alkis_spatial) so the maps cannot drift from the GeoJSON.
@@ -26,11 +33,12 @@ Only building footprints need a table here -- see HOUSES below.
 Boundaries come from bundeslaender.geojson (CRS84 lon/lat), so run
 bundeslaender_to_geojson.py first if it is missing.
 
-Usage : ./coverage_map.py [coverage|alkis|all] [out.svg] [bundeslaender.geojson]
+Usage : ./coverage_map.py [coverage|lidar|alkis|all] [out.svg] [bundeslaender.geojson]
 
   ./coverage_map.py            # coverage_map.svg + .png
+  ./coverage_map.py lidar      # lidar_map.svg + .png
   ./coverage_map.py alkis      # alkis_map.svg + .png
-  ./coverage_map.py all        # both, to their default names
+  ./coverage_map.py all        # all three, to their default names
 
 Stdlib only. A PNG is written beside each SVG if rsvg-convert, Chromium or qlmanage is found.
 """
@@ -40,6 +48,7 @@ import os
 import shutil
 import subprocess
 import sys
+from xml.sax.saxutils import escape
 
 # Scriptable building footprints, from hauskoordinaten-hausumringe.md (probed 2026-07-28).
 # This is the one input the GeoJSON does not carry. "True" means a direct anonymous URL or a
@@ -124,6 +133,23 @@ def classify_coverage(props, key):
     return "partial", detail
 
 
+def classify_lidar(props, key):
+    """Return (tier, detail) for the elevation map.
+
+    The split that matters is not open/closed -- all 16 publish elevation openly -- but
+    whether a script can reach it in bulk. Hence red is "no bulk endpoint", and the two
+    orange states are scripted, just with no point cloud published to fetch.
+    """
+    script = props.get("lidar_script")
+    if not script:
+        return "none", f"no bulk endpoint. {props.get('lidar_note') or ''}".strip()
+    have = [n for n, ok in (("point cloud", props.get("lidar_las")),
+                            ("terrain", props.get("lidar_dgm1"))) if ok]
+    bbox = "BBOX supported" if props.get("lidar_bbox") else "no BBOX support"
+    detail = f"{script} — {' + '.join(have)}; {bbox}"
+    return ("full" if len(have) == 2 else "partial"), detail
+
+
 # How finely download_alkis.sh can cut what a state publishes, spelled out for the tooltip.
 SPATIAL = {
     "exact": "any bbox (service query)",
@@ -160,6 +186,14 @@ MAPS = {
         legend=[("full", "all four datasets"),
                 ("partial", "missing one of the four"),
                 ("none", "no bulk LiDAR - cadastre only")],
+    ),
+    "lidar": dict(
+        out="lidar_map.svg",
+        classify=classify_lidar,
+        heading="LiDAR / terrain — what a script can fetch in bulk",
+        legend=[("full", "point cloud + terrain"),
+                ("partial", "terrain only — no point cloud published"),
+                ("none", "open, but no bulk endpoint — portal only")],
     ),
     "alkis": dict(
         out="alkis_map.svg",
@@ -275,7 +309,8 @@ def main():
                 best_area, biggest = area, pts
             paths.append("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + "Z")
 
-        tip = f"{p['name']} - {tier}: {detail}"
+        # detail can carry a state's free-text lidar_note, so it must be escaped.
+        tip = escape(f"{p['name']} - {tier}: {detail}")
         drawn.append((best_area,
                       f'  <path d="{"".join(paths)}" fill="{fill}" stroke="{stroke}" '
                       f'stroke-width="1.1" stroke-linejoin="round"><title>{tip}</title></path>'))
