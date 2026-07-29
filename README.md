@@ -249,11 +249,13 @@ cadastre openly; the three exceptions are content gaps at the source, not access
   (digitale Verwaltungsgrenzen, Hausumringe, Hauskoordinaten). Parcels and cadastral
   attributes need a formal request.
 
-All three are closed by the **paid** nationwide product: RP and ST sit inside **FS-DE**
-(15 states, ~54 M parcels, *ab* €27,000 from the ZSHH), Bayern only in **FS-BY** (€56,000 from
-the LDBV). Neither has a download endpoint — FS-DE is delivered on a returnable USB drive — so
-this is a purchase order, not a missing script. Costs, contents, licences and the free test
-Shapefile: [`flurstuecke-commercial.md`](flurstuecke-commercial.md).
+All three are closed by paying. RP and ST sit inside **FS-DE** (15 states, ~54 M parcels, *ab*
+€27,000 from the ZSHH), Bayern only in **FS-BY** (€56,000 from the LDBV); neither has a
+download endpoint — FS-DE arrives on a returnable USB drive. For **RP** there is a much cheaper
+third route: the CISS-Shop sells RP vector ALKIS for a drawn polygon at official state fees, as
+DXF/Shape/NAS. Costs, licences, the free FS-DE test Shapefile and the wider commercial market
+(geomer, infas 360, Nexiga, CISS TDI, per-object retail):
+[`flurstuecke-commercial.md`](flurstuecke-commercial.md).
 
 Two portals do sit behind a login, but neither is the only route to their state's data:
 

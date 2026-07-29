@@ -10,6 +10,10 @@ it is sold in two pieces — *ab* €27,000 for 15 states from the ZSHH, plus �
 from the LDBV. Roughly **€83,000 for all 16 states**. Nothing about it is open data, and
 there is no download endpoint of any kind: FS-DE ships on physical media.
 
+Around that sits a private market — bulk enriched datasets, area-of-interest procurement at
+official fees, and per-object retail. [§5](#5-the-commercial-provider-landscape) maps it, and
+covers **building** data too, since almost every vendor sells parcels and buildings together.
+
 ---
 
 # 1. What the money actually buys
@@ -25,6 +29,10 @@ route closes, and it is the only thing that closes them.
 | Fills **ST** | ❌ not published | ✅ | — |
 | Fills **BY** | ❌ raster only | ❌ | ✅ |
 | Cost | €0 | **from €27,000** | **€56,000** |
+
+The table compares the two *official* routes. There is a third for RP: the CISS-Shop sells RP
+vector ALKIS for a chosen polygon at official state fees, far below a statewide licence —
+[§5.2](#52-area-of-interest-procurement--the-model-closest-to-this-repo).
 
 So the €27,000 is mostly paying again for data 13 states already give away — what is *new* in
 it is Rheinland-Pfalz and Sachsen-Anhalt. Bayern is the expensive one: **40% of the total bill
@@ -132,18 +140,70 @@ ever be written against FS-DE**, credentialed or not.
 
 ---
 
-# 5. Value-added resellers
+# 5. The commercial provider landscape
 
-Third parties license FS-DE/FS-BY and resell it enriched. The polygons underneath are the same
-AdV geometry — what you pay for is the join and a simpler licence.
+Beyond the AdV channel there is a real market, surveyed **2026-07-29**. Four business models.
+Only the first sells you a nationwide file, and **not one of them publishes a price**.
 
-**infas 360** — `CASA Flurstücke`: 65 million parcels, genuinely nationwide **including
-Bayern**, pre-joined to Hauskoordinaten, building references and tatsächliche Nutzung under one
-key system (built-up vs. non-built-up, built-up share, public/private/commercial). Marketed on
-"uncomplicated licensing" and fast delivery. **Price on request** — nothing public.
+## 5.1 Bulk value-added datasets — one purchase, one file
 
-Worth it if you want parcels *linked* to addresses, buildings and use. Not worth it for
-geometry alone — that is FS-DE with a markup and one supplier between you and the cadastre.
+The polygons underneath are the same AdV geometry. What you pay for is the join, the derived
+attributes and a simpler licence.
+
+| Provider | Product | Scale | What is actually new in it |
+|---|---|---|---|
+| **geomer** (Heidelberg) | `fullHAUSde` | **57.5 M buildings**, updated **annually** | Outline geometry *plus* ~18 derived attributes: Basishöhe, Dachform, Gebäudehöhe/-volumen/-oberfläche, Gebäudealtersklasse, Gebäudetyp, Nutzung, Stockwerksanzahl, Heizungsart, Energieträger, Energiebezugsfläche, Wohnfläche, Einwohnerzahl, Vermögenswert, eindeutige Gebäude-ID |
+| **infas 360** (Bonn) | `CASA Flurstücke` + Gebäudedaten | **65 M parcels** — nationwide **incl. Bayern** | The only vendor found selling parcels *and* buildings on one key system. Parcels pre-joined to Hauskoordinaten, building references and tatsächliche Nutzung; buildings carry Baujahrsklasse, Energieeffizienz, Haushaltszahl, Dach- und Höheninformationen |
+| **Nexiga** (Bonn) | Hausdatenbank | **28 M houses** | Different provenance entirely — built from physical on-site surveys begun in the 1980s and repeated through the 1990s. Nine base attributes: Gebäudealter, Bauweise, Gartenart/-größe, Gebäudetyp, Lage im Ort, Wohnlage, Straßenart, Gestaltung, Pflegezustand |
+| **microm** | Geomarketing data | address-level | Zielgruppenmodelle, Konsumenten-, Lage- und Standortdaten with building typology attached. Not a parcel source |
+
+**Nexiga is the one that is not a repackaging of ALKIS.** Condition, garden, street character
+and Wohnlage are survey judgements; no amount of open data reproduces them. geomer's energy
+and volume fields are modelled, but modelled *once*, statewide, which is the expensive part.
+
+## 5.2 Area-of-interest procurement — the model closest to this repo
+
+**CISS TDI GmbH** (Sinzig) runs the **CISS-Shop**: define an area, get official ALKIS back.
+
+- Area by **drawn polygon**, by **uploaded coordinate list**, or by naming **Flurstücke with a
+  buffer along them** — deliberately independent of Gemarkung and municipal boundaries
+- Output as **DXF, Shape, or raw NAS/XML** from the official interface
+- **Price is the official state fee**, computed from area / object count and shown before you
+  order — not a vendor licence. Adjust the polygon, watch the number move
+- States live today: **RP, BB, NI, HH, NW, BE, TH**; cross-state orders accepted; more "will
+  follow"
+- **Hausumringe and Hauskoordinaten nationwide** through the same shop. Their HK is enriched
+  with extra address fields from Deutsche Post Direkt
+- Tooling sold alongside: `CISS.Konverter2go` (GeoInfoDok 7 ALKIS → DXF/SHP into a
+  Geodata-Warehouse), `CISS.Map2go` (nationwide WMS/WFS of Flurstücke, Hausumringe,
+  Siedlungsflächen), `CISS.Geo2go`, `CITRA`
+
+**This is the route to Rheinland-Pfalz vector parcels.** RP holds vector ALKIS and sells it
+under its official fee schedule; only the *open-data* publication is rasterised. So RP's gap is
+a per-area purchase at state fees, not the €27,000 FS-DE licence — see
+[§6](#6-what-this-means-for-this-repo).
+
+## 5.3 Data-as-a-Service and per-object retail
+
+Billed per lookup. Right for hundreds of parcels, wrong shape for a bulk pipeline.
+
+| Provider | Model |
+|---|---|
+| **datenservice.plus** | DaaS for insurers, banks and real estate. Claims **65 M Flurstücke, 57 M Gebäudedaten, 25 M queries** served, via API and web app |
+| **geoindex.io** | Parcel search engine, **all 16 states**. Search by address, Flurstück, coordinates or an uploaded Google Earth KMZ; returns Liegenschaftskarte (Katasterauszug) or Flurstücksgeometrie immediately |
+| **on-geo** (München) | `geoport` — the largest German-language webshop for property data and documents (Grundbuch, Flurkarten). Also `Lora` (Beleihungswert), `Accumate` (AVM) |
+| **Sprengnetter** | Valuation ecosystem and Marktdatenportal, BaFin/EBA-oriented; data arrives as part of the AVM rather than as a dataset |
+| **grundbuchplus.de**, **flurcheck.de** | Same per-object retail model |
+
+## 5.4 3D building models
+
+**virtualcitySYSTEMS** (`vc.systems`, founded Chemnitz 2005) is the leading German name here,
+but they sell **software and services** around digital twins — they build on the states'
+official LoD2, they do not license a nationwide building dataset.
+
+Worth knowing before paying anyone for 3D: the BKG open-data catalogue already carries
+**3D Tiles basemap.de 3D Gebäude** and **3D Gelände** as open data. Nationwide 3D buildings
+need no vendor at all.
 
 ---
 
@@ -153,13 +213,17 @@ geometry alone — that is FS-DE with a markup and one supplier between you and 
    FS-DE is strictly less automatable than the 15 state sources, because it arrives by post.
 2. **The BY gap has a price now: €56,000.** That is the honest answer to "can we complete
    Bayern" — not a scripting problem, a purchase order.
-3. **RP and ST are cheaper to close than they look.** Both are inside FS-DE, so the marginal
-   cost of vector parcels for them is the same €27,000 that mostly re-buys the free 13. If
-   only those two matter, ask the ZSHH about a subset before assuming the full fee.
-4. **Grab the free FS-DE test Shapefile** before any of the above. Comparing its schema with
+3. **Rheinland-Pfalz does not need FS-DE at all.** RP vector ALKIS is orderable from the
+   CISS-Shop for a chosen polygon at **official state fees** — the state has the vectors, it
+   just publishes only the raster openly. For an area of interest rather than the whole state
+   this is one or two orders of magnitude below the €27,000 licence, and it arrives as
+   DXF/Shape/NAS rather than by post. Check CISS before assuming the AdV route.
+4. **If a whole state really is the goal**, FS-DE is still the only single-invoice way to get
+   RP in bulk — ask the ZSHH about a subset price before paying for all 15.
+5. **Grab the free FS-DE test Shapefile** before any of the above. Comparing its schema with
    `download_alkis.sh` output for the same area is the cheapest way to learn what the paid
    normalisation is actually worth — and it is 1.7 MB.
-5. **The nationwide-single-file itch is a normalisation project, not a purchase.** Thirteen
+6. **The nationwide-single-file itch is a normalisation project, not a purchase.** Thirteen
    states already give you the geometry; what FS-DE sells on top is one schema and one CRS
    policy. That is buildable here, and the DFB V 1.2.1 spec is public — using FS-DE's field
    names as the target schema costs nothing.
@@ -182,5 +246,15 @@ geometry alone — that is FS-DE with a markup and one supplier between you and 
 - Open-data catalogue (107 products, no cadastre): <https://gdz.bkg.bund.de/index.php/default/open-data.html>
 - Open download tree (8 categories, no cadastre): <https://daten.gdz.bkg.bund.de/produkte/>
 
-**Resellers**
-- infas 360 CASA Flurstücke: <https://www.infas360.de/blog-flurstuecke/> · <https://www.infas360.de/casa-plus-flurstuecke-und-mehr/>
+**Commercial providers** (surveyed 2026-07-29)
+- infas 360 — CASA Flurstücke: <https://www.infas360.de/blog-flurstuecke/> · <https://www.infas360.de/casa-plus-flurstuecke-und-mehr/> · Gebäudedaten: <https://www.infas360.de/gebaeudedaten/>
+- geomer — fullHAUSde: <https://www.geomer.de/geodaten-dienste/fullhausde.html>
+- Nexiga — Gebäudedaten: <https://nexiga.com/gebaeudedaten/> · Geodaten: <https://nexiga.com/daten/geodaten/>
+- microm: <https://www.microm.de/daten/>
+- CISS TDI — ALKIS shop: <https://www.ciss.de/geodaten-online-beschaffung/alkis/> · HU/HK: <https://www.ciss.de/geodaten-online-beschaffung/hausumringe_koordinaten/> · tools: <https://www.ciss.de/geodaten-software-und-tools/>
+- datenservice.plus: <https://datenservice.plus/>
+- geoindex.io: <https://geoindex.io/>
+- on-geo (geoport): <https://www.on-geo.de/>
+- Sprengnetter: <https://www.sprengnetter.de/>
+- virtualcitySYSTEMS: <https://vc.systems/>
+- Directory used to find them: <https://immobiliendatenliste.de/>
