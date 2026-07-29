@@ -593,56 +593,6 @@ state publishes as its index:
 Only RP publishes checksums, so only `rp` is hash-verified; everywhere else downloads are
 parallel, resumable (`--continue`) and size-checked.
 
-# Convert to cloud-optimized formats
-
-`convert_to_cloud_optimized.sh` turns the downloaded tiles into streamable formats:
-
-| Source                      | Cloud-optimized output            | Tool | Output tree | Notes |
-|-----------------------------|-----------------------------------|------|-------------|-------|
-| `dgm1` GeoTIFF (RP)         | **COG** (Cloud Optimized GeoTIFF) | GDAL | `dtm/de/rlp/` | Float32, ZSTD + PREDICTOR=3, AVERAGE overviews, 512px tiles |
-| `dgm1` zipped XYZ (BW)      | **COG**, 4 per zip                | GDAL | `dtm/de/bw/`  | same recipe + `-a_srs EPSG:25832 -ot Float32`; 29 MB XYZ → ~1.8 MB COG |
-| `las` `.laz` (RP)           | **COPC** (`.copc.laz`)            | PDAL | `point-cloud/de/rlp/` | octree-indexed, HTTP range-streamable; ~189 MB LAZ → ~144 MB COPC |
-
-Output is organized by product type then ISO-style location (`de` = Germany, then the state),
-relative to an optional `output_base` (default `.`):
-
-```
-<output_base>/dtm/de/rlp/dgm1_32_400_5580_1_rp_2024.tif
-<output_base>/dtm/de/bw/dgm1_32_517_5424_1_bw_2023.tif
-<output_base>/point-cloud/de/rlp/LAS_320_5510_las12.copc.laz
-```
-
-```bash
-brew install gdal pdal
-
-./convert_to_cloud_optimized.sh dgm1                    # ./rlp_lidar/dgm1 -> ./dtm/de/rlp
-./convert_to_cloud_optimized.sh las                     # ./rlp_lidar/las  -> ./point-cloud/de/rlp
-./convert_to_cloud_optimized.sh both ./rlp_lidar /data  # -> /data/{dtm,point-cloud}/de/rlp
-
-./convert_to_cloud_optimized.sh bw dgm1                 # ./bw_lidar/dgm1  -> ./dtm/de/bw
-./convert_to_cloud_optimized.sh bw dgm1 ./bw_lidar /data
-
-DRY_RUN=1 ./convert_to_cloud_optimized.sh las           # list, convert nothing
-JOBS=8 ./convert_to_cloud_optimized.sh dgm1             # cap parallelism (default = CPU count)
-KEEP=0 ./convert_to_cloud_optimized.sh dgm1             # delete each source after a verified convert
-```
-
-The leading state token (`rlp` | `bw`) is optional and defaults to `rlp`, so the original
-invocations are unchanged. BW zips are unpacked to a temp dir per zip, converted, then the
-temp dir is removed; a zip whose four COGs already exist and are newer is skipped without
-unpacking (`KEEP=0` deletes the zip after all four convert cleanly).
-
-> **The converter still only knows `rlp` and `bw`.** The seven other downloaders are not wired
-> into it. Their layouts differ — NW and BY ship bare `.tif`/`.laz` (closest to RP), BB/SN/BE
-> ship one-file-per-zip (closest to BW), MV ships bare `.tif`, and NI needs no conversion at
-> all because its tiles are already COGs. Adding them is a per-state entry in the converter's
-> layout table, not new logic.
-
-- Re-running **skips** already-converted, up-to-date outputs (safe to resume).
-- COG compression is overridable via `COG_COMPRESS` / `COG_PRED` / `COG_LEVEL` — if your GDAL
-  build has the **LERC** codec, `COG_COMPRESS=LERC_ZSTD` is ideal for elevation (this brew build lacks it).
-- COPC is **CPU-heavy** (~20–30 s/tile); the full ~21k-tile point cloud is a long run — size accordingly.
-
 # The 16 Bundesländer
 
 Germany is composed of 16 federal states (*Bundesländer*), including three city-states
