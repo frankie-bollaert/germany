@@ -53,8 +53,8 @@ Docs (public, no login):
 Under the EU High-Value-Datasets rules the states publish their own ALKIS-derived building and
 address data. Coverage is **good but not complete**, and every state does it differently.
 
-| State | Hausumringe (footprints) | Hauskoordinaten (addresses) | Licence | Packaging |
-|-------|--------------------------|------------------------------|---------|-----------|
+| ID | Hausumringe (footprints) | Hauskoordinaten (addresses) | Licence | Packaging |
+|----|--------------------------|------------------------------|---------|-----------|
 | **BW** | ✅ direct ZIP | ✅ direct ZIP | DL-DE/BY 2.0 | statewide |
 | **BY** | ✅ direct ZIP ×7 | ❌ **paid** | **CC BY 4.0** | Regierungsbezirk |
 | **BE** | ⚠️ WFS only | ✅ direct ZIP (HK-DE format!) | **DL-DE/Zero 2.0** | statewide |
@@ -73,7 +73,8 @@ address data. Coverage is **good but not complete**, and every state does it dif
 | **TH** | ⚠️ **CAPTCHA-gated** | ⚠️ **CAPTCHA-gated** | DL-DE/BY 2.0 | statewide |
 
 ✅ = scriptable direct URL, verified · ⚠️ = open but needs a service call, session or login ·
-❌ = not available as open data
+❌ = not available as open data · IDs are ISO 3166-2 without `DE-`, as everywhere else in this
+repo — see [The state ID](bundeslaender.md#the-state-id)
 
 **Scriptable today: 9 states for HU, 5 states for HK.**
 
@@ -189,7 +190,7 @@ Best-documented open source of the lot, **DL-DE/Zero 2.0**, with JSON/XML direct
 | HK-equivalent | `https://www.opengeodata.nrw.de/produkte/geobasis/lk/akt/gebref_txt/gebref_EPSG25832_ASCII.zip` | 200, 96,902,046 B, 2026-03-11 |
 | HU-equivalent | `…/lk/akt/gru_vereinfacht_gpkg/gru_vereinf_<AGS>_<Name>_EPSG25832_GeoPackage.zip` | 200, index listed |
 
-- "Gebäudereferenzen" (`gebref`) = NRW's Hauskoordinaten analogue, ASCII, statewide, EPSG:25832.
+- "Gebäudereferenzen" (`gebref`) = NW's Hauskoordinaten analogue, ASCII, statewide, EPSG:25832.
 - "Grundrissdaten vereinfacht" = simplified footprints, GeoPackage, **one ZIP per Kreis /
   kreisfreie Stadt** (e.g. `gru_vereinf_05711000_Bielefeld_EPSG25832_GeoPackage.zip`, 74 MB).
 - Full ALKIS NAS at `…/lk/akt/gru_xml/`.
@@ -272,7 +273,7 @@ endpoint exists (`https://geoportal.thueringen.de/gaialight-th/_apps/dladownload
    the ALKIS packages, HB/SL via WFS dump) and **five for addresses** (BW, BE, NW, RP, SN).
 2. **Mind the CRS split.** HU-DE/HK-DE are uniformly EPSG:25832, but BE, BB, MV and SN publish
    in **EPSG:25833**. Anything nationwide has to reproject.
-3. **Schemas do not match.** Only Berlin ships documented HK-DE format. NRW calls it
+3. **Schemas do not match.** Only Berlin ships documented HK-DE format. NW calls it
    Gebäudereferenzen, BW drops the postal fields, SH drops the PLZ-Abgleich. A normalised
    `AGS/ARS/OI/GFK` table is real work, not a `cat`.
 4. **Three access patterns beyond plain HTTP:** account login (HE), CAPTCHA (TH), interactive
@@ -280,7 +281,7 @@ endpoint exists (`https://geoportal.thueringen.de/gaialight-th/_apps/dladownload
    the BKG product if you're eligible.
 5. **Two traps worth encoding:** Sachsen rejects `HEAD` (401) — use ranged `GET`; and
    Schleswig-Holstein's opengeodata host 403s any non-browser User-Agent.
-6. **NRW and RLP are the models to copy** — both publish machine-readable indexes
+6. **NW and RP are the models to copy** — both publish machine-readable indexes
    (JSON/XML directory listings, Metalink-4 with SHA-256), so the tile list is never
    hard-coded, exactly like the existing LiDAR scripts.
 

@@ -90,7 +90,12 @@ OFFSET_LABELS = {
 NUDGE = {"bb": (20, 82)}
 
 W, H, PAD = 620, 800, 14
-LEGEND_H = 96
+LEGEND_H = 118
+
+# Both maps label states with the repo-wide ID, so both say so. See "The state ID" in
+# bundeslaender.md -- the ID is the ISO 3166-2 code minus the DE- prefix, and the same string
+# indexes the GeoJSON, sample_squares.tsv, download_alkis.sh and the output trees.
+FOOTNOTE = "Labels are state IDs — ISO 3166-2 without the DE- prefix."
 
 
 def classify_coverage(props, key):
@@ -302,6 +307,8 @@ def main():
         leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
                    f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>')
         leg.append(f'  <text x="{PAD + 22}" y="{y}" class="l">{text}</text>')
+    leg.append(f'  <text x="{PAD}" y="{ly + len(spec["legend"]) * 20 + 2}" class="f">'
+               f'{FOOTNOTE}</text>')
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" \
 viewBox="0 0 {W} {H}" font-family="Helvetica,Arial,sans-serif">
@@ -309,6 +316,7 @@ viewBox="0 0 {W} {H}" font-family="Helvetica,Arial,sans-serif">
     text {{ font-size: 11px; font-weight: 600; text-anchor: middle; }}
     text.l {{ font-size: 12px; font-weight: 400; text-anchor: start; fill: #333; }}
     text.h {{ font-size: 12px; font-weight: 700; text-anchor: start; fill: #111; }}
+    text.f {{ font-size: 10px; font-weight: 400; text-anchor: start; fill: #777; }}
   </style>
   <rect width="{W}" height="{H}" fill="#fff"/>
 {chr(10).join(body)}
