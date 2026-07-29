@@ -119,11 +119,15 @@ fetch_las() {
   local urls="$dir/.urls.txt"
   : >"$urls.tmp"
 
-  # Sweep the bounding box; each cell is one POSTed EWKT polygon.
+  # Sweep the bounding box; each cell is one POSTed EWKT polygon. Cells are clipped to the
+  # box: without that, a cell always spans the full STEP, so a BBOX smaller than 40 km — a
+  # sample square, say — would be silently widened to 40x40 km and return the whole area's
+  # tiles. The service takes any polygon, so the last cell in each direction is simply short.
   local e n e2 n2 cells=0
   for (( e = mine; e < maxe; e += STEP )); do
     for (( n = minn; n < maxn; n += STEP )); do
-      e2=$(( e + STEP )); n2=$(( n + STEP ))
+      e2=$(( e + STEP )); (( e2 > maxe )) && e2=$maxe
+      n2=$(( n + STEP )); (( n2 > maxn )) && n2=$maxn
       local ewkt="SRID=25832;MULTIPOLYGON((($((e*1000)) $((n*1000)), $((e2*1000)) $((n*1000)), $((e2*1000)) $((n2*1000)), $((e*1000)) $((n2*1000)), $((e*1000)) $((n*1000)))))"
       curl -fsS --max-time 180 -X POST --data-binary "$ewkt" "$POLY2META" \
         | grep -oE '<url>[^<]+</url>' | sed 's|<url>||;s|</url>||' >>"$urls.tmp" || true

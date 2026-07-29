@@ -10,6 +10,7 @@ found, not because the data is gated.
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
 | **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
+| **LiDAR, sample squares only** | `download_samples.sh` | [A 5×5 km square per state](#lidar-for-the-sample-squares-only) |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
 
@@ -111,6 +112,54 @@ A failing combination is logged to `<root>/.download_all.failures` and the walk 
 re-running the same command retries it and resumes everything else. The only change this makes
 to the per-state scripts is `OUTDIR=` — set it yourself and any of them writes straight into
 the path you give instead of appending its own subdirectory.
+
+---
+
+# LiDAR for the sample squares only
+
+`download_samples.sh` runs the LiDAR downloaders over the 5×5 km squares in
+[`sample_squares.tsv`](sample_squares.tsv) — one per state, aligned to the UTM kilometre grid
+in that state's own CRS so the square lands on tile boundaries and never asks for a partial
+tile. This is the sampling path; `download_all.sh` has no `BBOX` and always takes whole states.
+
+```bash
+DRY_RUN=1 ./download_samples.sh both       # every state's plan and tile count, no transfer
+./download_samples.sh dgm1                 # terrain for all 16 squares -> ./samples/<id>/dgm1
+./download_samples.sh both                 # terrain + a centred point-cloud core
+STATES="nw be sn" ./download_samples.sh both
+LAS_KM=5 ./download_samples.sh las         # full square of point cloud, ~2.4 GB per state
+```
+
+Output is `./samples/<id>/{dgm1,las}` — the layout `convert_to_cloud_optimized.sh` expects, so
+`./convert_to_cloud_optimized.sh dgm1 ./samples/nw ./cog` follows directly.
+
+What a `both` run actually plans, verified live 2026-07-29:
+
+| State | dgm1 | las | Note |
+|-------|------|-----|------|
+| BB Lübbenau | 25 tiles | **0** | ALS still partial — the centred core is in a gap; 5 tiles across the full square |
+| NW Königswinter | 25 tiles | 9 tiles (1.5 GB) | 1 km grid, the reference case |
+| NI Goslar | 25 tiles | — | no open point cloud |
+| MV Sassnitz | 6 tiles | 9 tiles | dgm1 on a 2 km grid, las on 1 km |
+| SN Bad Schandau | 4 tiles | 4 tiles | 2 km packaging both products |
+| BW Heidelberg | 4 tiles | — | no open point cloud |
+| BE Berlin-Mitte | 9 tiles | refused | las ships as 9 city-region ZIPs, not tiles |
+| BY Garmisch | refused | 4 tiles | dgm1 is one statewide Metalink, uncuttable |
+| RP St. Goarshausen | refused | refused | no `BBOX` support at all |
+
+The seven states with no LiDAR downloader (HB, HH, HE, SL, ST, SH, TH) are skipped with a
+reason. **Refusals are the point**: a downloader that ignores `BBOX` accepts the square and
+plans the whole state, so RP alone would pull 32.8 GB of terrain and 5.18 TB of point cloud
+under the guise of a sample. Each is detected and refused rather than skipped quietly;
+`ALLOW_UNCUT=1` forces them, which is only useful with `DRY_RUN=1` to see the size.
+
+Two units meet here. Every downloader takes `BBOX` as **UTM kilometres, inclusive of both
+corners** — so the TSV's true 5 km extent (`371..376`) has 1 subtracted from each maximum,
+because passing it verbatim selects six tiles per axis. Niedersachsen is the exception under
+the hood: its STAC API filters only in WGS84 degrees, so `download_ni_lidar.sh` now accepts
+either, telling them apart by magnitude, and applies a UTM box to the tile key carried in each
+item name (`dgm1_32_601_5752_1_ni_2018` → 601, 5752). Exact, but it costs a walk of the whole
+~94-page catalogue to find 25 tiles.
 
 ---
 
