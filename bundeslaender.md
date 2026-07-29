@@ -166,6 +166,13 @@ building footprints?** Footprint sources are detailed in
 
 **Five states: Brandenburg, Berlin, Mecklenburg-Vorpommern, Nordrhein-Westfalen, Sachsen.**
 
+<img src="coverage_map.png" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, SL, ST, TH) for no bulk LiDAR" width="560">
+
+Regenerate it with [`coverage_map.py`](coverage_map.py) after any coverage change — it reads
+`lidar_las`, `lidar_dgm1` and `alkis` straight out of `bundeslaender.geojson`, so the map
+follows the data rather than this table. Footprints are the one input it carries itself.
+`coverage_map.svg` is the same image as vector.
+
 | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |-------|-------------|------------|--------------------|------------------|
 | **Brandenburg** (BB) | ✅ `download_bb_lidar.sh` | ✅ same | ✅ `download_alkis.sh bb` — NAS/Shape, 18 Landkreise | ✅ inside that same ALKIS package |
