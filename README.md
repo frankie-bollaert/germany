@@ -8,7 +8,7 @@ found, not because the data is gated.
 | Data | Downloader | Coverage |
 |------|------------|----------|
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
-| **ALKIS (cadastre)** | `download_alkis.sh <id>` | 15 of 16 states |
+| **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
 
@@ -69,7 +69,7 @@ its `.png`, same image as vector, with a per-state tooltip the PNG cannot carry.
 | **BY** | Bayern | plots | Same single gap: ALKIS-Parzellarkarte is raster-only, vector parcels are sold through GeodatenOnline. Hausumringe are open (CC BY 4.0); Hauskoordinaten are priced. |
 | **BW** | Baden-Württemberg | point cloud | Full ALKIS + HU + HK, 125 GB of DGM1 — but the `3DM` point cloud is flagged inactive and every URL 404s. |
 | **NI** | Niedersachsen | point cloud | STAC exposes `dgm1` only. Cadastre and footprints are fine (`gebaeude` WFS); the standalone HK/HU products are priced. |
-| **TH**, **SH**, **ST**, **HE**, **HH**, **HB**, **SL** | — | point cloud + DTM | No anonymous bulk LiDAR endpoint found — portals, CAPTCHAs and order clients, not access restrictions. ST additionally has no open ALKIS at all. |
+| **TH**, **SH**, **ST**, **HE**, **HH**, **HB**, **SL** | — | point cloud + DTM | No anonymous bulk LiDAR endpoint found — portals, CAPTCHAs and order clients, not access restrictions. Their cadastre and footprints are fine. |
 
 ## Fetching all four today
 
@@ -177,11 +177,11 @@ Nutzung*), addresses. Each state runs its own, so each publishes it differently 
 all. Owner names (*Eigentümerangaben*) are **never** open data anywhere; what states release
 is the *ohne Eigentümer* (oE) variant.
 
-<img src="alkis_map.png" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 13 states publishing full vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only, red for ST which does not publish it at all" width="560">
+<img src="alkis_map.png" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 14 states publishing vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only" width="560">
 
-Thirteen states are green. The two orange ones are not a delivery problem — BY and RP publish
+Fourteen states are green. The two orange ones are not a delivery problem — BY and RP publish
 their cadastre as **raster**, so the download works fine and parcel geometry simply is not in
-what arrives. Only ST is closed.
+what arrives. **No state is fully closed.**
 
 **"Login"** below means a user account is needed to get the data; **"anonymous"** means plain
 HTTP with no credentials.
@@ -201,7 +201,7 @@ HTTP with no credentials.
 | **RP** | Rheinland-Pfalz | ⚠️ **raster only** | **anonymous** | Metalink-4 | GeoTIFF cadastral map · 1 km tile | DL-DE/BY 2.0 |
 | **SL** | Saarland | ✅ full (oE) | **anonymous** | public WebDAV share | NAS, Shape · Landkreis (7) | DL-DE/BY 2.0 |
 | **SN** | Sachsen | ✅ full (oE) | **anonymous** | single ZIP | NAS · statewide | DL-DE/BY 2.0 |
-| **ST** | Sachsen-Anhalt | ❌ **not open** | — | (formal request to LVermGeo) | — | — |
+| **ST** | Sachsen-Anhalt | ✅ vereinfacht (oE) | **anonymous** | WFS 2.0 only | GML · statewide (~2.7 M parcels) | DL-DE/BY 2.0 |
 | **SH** | Schleswig-Holstein | ✅ full (oE) | **anonymous** | single file | GeoJSON · statewide (~243 MB) | CC BY 4.0 |
 | **TH** | Thüringen | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | Shape, NAS · Flur (~16,500) | DL-DE/BY 2.0 |
 
@@ -226,16 +226,15 @@ What `download_alkis.sh` actually fetches, per state:
 | `sn` | Sachsen | `nas` | statewide | one ZIP |
 | `sh` | Schleswig-Holstein | `geojson` | statewide | ~243 MB |
 | `th` | Thüringen | `shape`, `nas` | Flur (~16,500) | ~1.2 GB |
-| `st` | Sachsen-Anhalt | — | — | **not published** |
+| `st` | Sachsen-Anhalt | `flurstueck`, `gebaeude`, `nutzung` | WFS pages | ~2.7 M parcels |
 
 `bw`, `by` and `rp` come with a caveat printed at run time — Bayern publishes no open vector
-parcels and RP only a rasterised cadastral map. `st` exits with an explanation rather than
-pretending there is something to fetch.
+parcels and RP only a rasterised cadastral map.
 
-## The three content gaps
+## The two content gaps
 
-**No state requires a login for the data listed above.** Thirteen states publish the full
-cadastre openly; the three exceptions are content gaps at the source, not access barriers:
+**No state requires a login for the data listed above.** Fourteen states publish vector
+cadastre openly; the two exceptions are content gaps at the source, not access barriers:
 
 - **Bayern** — the *ALKIS-Parzellarkarte* is published as **raster only** (WMS/WMTS and
   GeoTIFF via Metalink). Open vector products are limited to *Tatsächliche Nutzung*
@@ -245,17 +244,20 @@ cadastre openly; the three exceptions are content gaps at the source, not access
 - **Rheinland-Pfalz** — publishes the **rasterised** Liegenschaftskarte (`lika`, ~20,500
   GeoTIFF tiles, ~31 GB) and *Hausumringe*, but no bulk vector ALKIS. Parcel geometry is
   reachable only per-query through the Flurstückssuche WFS.
-- **Sachsen-Anhalt** — the LVermGeo open-data catalogue carries only ALKIS *derivatives*
-  (digitale Verwaltungsgrenzen, Hausumringe, Hauskoordinaten). Parcels and cadastral
-  attributes need a formal request.
-
-All three are closed by paying. RP and ST sit inside **FS-DE** (15 states, ~54 M parcels, *ab*
-€27,000 from the ZSHH), Bayern only in **FS-BY** (€56,000 from the LDBV); neither has a
-download endpoint — FS-DE arrives on a returnable USB drive. For **RP** there is a much cheaper
-third route: the CISS-Shop sells RP vector ALKIS for a drawn polygon at official state fees, as
+Both are closed by paying. RP sits inside **FS-DE** (15 states, ~54 M parcels, *ab* €27,000
+from the ZSHH), Bayern only in **FS-BY** (€56,000 from the LDBV); neither has a download
+endpoint — FS-DE arrives on a returnable USB drive. For **RP** there is a much cheaper third
+route: the CISS-Shop sells RP vector ALKIS for a drawn polygon at official state fees, as
 DXF/Shape/NAS. Costs, licences, the free FS-DE test Shapefile and the wider commercial market
 (geomer, infas 360, Nexiga, CISS TDI, per-object retail):
 [`flurstuecke-commercial.md`](flurstuecke-commercial.md).
+
+**Sachsen-Anhalt used to be listed here as a third gap.** It is not one: LVermGeo publishes
+`ST_LVermGeo_ALKIS_WFS_OpenData`, an anonymous WFS 2.0 carrying `ave:Flurstueck` (~2.7 M),
+`ave:GebaeudeBauwerk` (~1.7 M) and `ave:Nutzung` under DL-DE/BY 2.0. It is the
+**ALKIS-vereinfacht 2.0** schema rather than full NAS — geometry plus the cadastral keys
+(`flstkennz`, `gemarkung`, `flur`, `flaeche`, `lagebeztxt`), no Punktinformationen — which is
+the same trade NW's `gru_vereinfacht` and SH's GeoJSON make. Verified 2026-07-29.
 
 Two portals do sit behind a login, but neither is the only route to their state's data:
 
@@ -266,8 +268,8 @@ Two portals do sit behind a login, but neither is the only route to their state'
   the statewide open datasets on a **password-less public Nextcloud share**, which is what
   the downloader reads.
 
-Four states publish **services only** — no file packages exist, so a bulk copy means paging
-a WFS or OGC API (`download_alkis.sh` does this automatically): BE, HB, NI, HE.
+Five states publish **services only** — no file packages exist, so a bulk copy means paging
+a WFS or OGC API (`download_alkis.sh` does this automatically): BE, HB, NI, HE, ST.
 
 All ALKIS data above is in **ETRS89 / UTM** (EPSG:25832, EPSG:25833 in the east).
 

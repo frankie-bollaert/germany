@@ -18,15 +18,13 @@ covers **building** data too, since almost every vendor sells parcels and buildi
 
 # 1. What the money actually buys
 
-The open route already delivers full vector ALKIS for **13 states**. The three gaps — BY, RP,
-ST, see [The three content gaps](README.md#the-three-content-gaps) — are exactly what the paid
-route closes, and it is the only thing that closes them.
+The open route already delivers vector ALKIS for **14 states**. Only two gaps remain — BY and
+RP, see [The two content gaps](README.md#the-two-content-gaps).
 
 | | Open (`download_alkis.sh`) | FS-DE (ZSHH) | FS-BY (LDBV) |
 |---|---|---|---|
-| States | 13 vector + BY/RP raster | **15** — all but Bayern | Bayern only |
+| States | 14 vector + BY/RP raster | **15** — all but Bayern | Bayern only |
 | Fills **RP** | ❌ raster only | ✅ | — |
-| Fills **ST** | ❌ not published | ✅ | — |
 | Fills **BY** | ❌ raster only | ❌ | ✅ |
 | Cost | €0 | **from €27,000** | **€56,000** |
 
@@ -34,11 +32,12 @@ The table compares the two *official* routes. There is a third for RP: the CISS-
 vector ALKIS for a chosen polygon at official state fees, far below a statewide licence —
 [§5.2](#52-area-of-interest-procurement--the-model-closest-to-this-repo).
 
-So the €27,000 is mostly paying again for data 13 states already give away — what is *new* in
-it is Rheinland-Pfalz and Sachsen-Anhalt. Bayern is the expensive one: **40% of the total bill
-for ~17% of the parcels**, and the single state no route makes free.
+So the €27,000 buys one state's worth of new geometry — Rheinland-Pfalz — on top of 14 that are
+already free. **Sachsen-Anhalt used to be counted here as a second gap and is not one**: it
+publishes an open ALKIS WFS, verified 2026-07-29. Bayern is the expensive one: **40% of the
+total bill for ~17% of the parcels**, and the single state no route makes free.
 
-What you also buy, for the 13 states you could have fetched yourself: one schema instead of
+What you also buy, for the 14 states you could have fetched yourself: one schema instead of
 fifteen, one CRS decision, one quarterly cycle, and no NAS parsing. That is the real product —
 convenience, not coverage.
 
@@ -55,7 +54,7 @@ up so buyers sign one contract instead of negotiating with 16 state agencies.
 |---|---|
 | Content | georeferenced Umringpolygone of all Flurstücke — **geometry only** |
 | Records | ~54 million |
-| Coverage | 15 states — BW, BE, BB, HB, HH, HE, MV, NI, NW, **RP**, SL, SN, **ST**, SH, TH. **No Bayern** |
+| Coverage | 15 states — BW, BE, BB, HB, HH, HE, MV, NI, NW, **RP**, SL, SN, ST, SH, TH. **No Bayern** |
 | Attributes | Objektidentifikator · ALKIS-Flurstückskennzeichen · Gemarkung + Flurstücksnummer · AGS · textual Lagebezeichnung |
 | Not included | **owners** (as everywhere), **tatsächliche Nutzung**, Grenzpunkte — the polygons carry no boundary points |
 | Format | Shapefile |
@@ -223,7 +222,7 @@ need no vendor at all.
 5. **Grab the free FS-DE test Shapefile** before any of the above. Comparing its schema with
    `download_alkis.sh` output for the same area is the cheapest way to learn what the paid
    normalisation is actually worth — and it is 1.7 MB.
-6. **The nationwide-single-file itch is a normalisation project, not a purchase.** Thirteen
+6. **The nationwide-single-file itch is a normalisation project, not a purchase.** Fourteen
    states already give you the geometry; what FS-DE sells on top is one schema and one CRS
    policy. That is buildable here, and the DFB V 1.2.1 spec is public — using FS-DE's field
    names as the target schema costs nothing.

@@ -15,9 +15,9 @@ the answers on geometry, so a glance replaces a table read.
             red    terrain only -- the state publishes no point cloud                    (2)
 
   alkis     what does the state's cadastre actually contain?
-            green  full vector ALKIS ohne Eigentuemer                                   (13)
+            green  full vector ALKIS ohne Eigentuemer                                   (14)
             orange raster cadastral map only -- a picture of the parcels, not geometry   (2)
-            red    not open data                                                         (1)
+            red    not open data                                                         (0)
 
 Colour is per-map, not per-tier, because "worst" is a different question on each. The lidar
 map inverts the other two: red is the state with no point cloud to fetch, orange the one
@@ -74,7 +74,7 @@ HOUSES = {
     "rp": True,   # HAUSUMRINGE_RP.zip with a .meta4
     "sl": True,   # inside the per-Landkreis ALKIS packages
     "sn": True,   # hu_sn_shape.zip (ranged GET -- the share 401s on HEAD)
-    "st": True,   # Hausumringe.zip, direct; no ALKIS to carry it
+    "st": True,   # Hausumringe.zip, direct; also ave:GebaeudeBauwerk in the ALKIS WFS
     "sh": True,   # inside the statewide ALKIS GeoJSON
     "th": False,  # HU/HK are CAPTCHA-gated; ALKIS Shape/NAS is not, but see note below
 }

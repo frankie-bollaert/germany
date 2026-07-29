@@ -31,13 +31,12 @@
 #                                 map + Hausumringe only
 #   sl   Saarland                 full oE, per Landkreis    anon    WebDAV -> zip (NAS/Shape)
 #   sn   Sachsen                  full oE, statewide        anon    single zip (NAS)
-#   st   Sachsen-Anhalt           NOT open — only DVG,      n/a     (script refuses)
-#                                 Hausumringe, Hauskoord.
+#   st   Sachsen-Anhalt           full oE (vereinfacht)     anon    WFS 2.0 (no file dumps)
 #   sh   Schleswig-Holstein       full oE, statewide        anon    single GeoJSON
 #   th   Thüringen                full oE, per Flur         anon    ATOM -> zip (Shape/NAS)
 #
 # No state requires a login for the data this script fetches. Two states are incomplete at
-# the source (by, rp) and one publishes no ALKIS at all (st) — see README.md.
+# the source (by, rp) — see README.md.
 #
 # Usage : ./download_alkis.sh <state> [dataset] [output_dir]
 #   ./download_alkis.sh nw                  # NRW, NAS, -> ./alkis/nw
@@ -95,7 +94,8 @@ sl     nas, shape                    full ALKIS oE, one zip per Landkreis (7)
 sn     nas                           full ALKIS oE, one statewide zip
 sh     geojson                       statewide Massendownload GeoJSON (~243 MB)
 th     shape, nas                    full ALKIS oE, one zip per Flur (~9k)
-st     —                             ALKIS is not open data in Sachsen-Anhalt
+st     flurstueck, gebaeude,         ALKIS-vereinfacht WFS, statewide (~2.7 M parcels)
+       nutzung
 EOF
   exit 0
 }
@@ -488,20 +488,19 @@ plan_sn() {
 }
 
 plan_st() {
-  cat >&2 <<'EOF'
-ERROR: Sachsen-Anhalt does not publish ALKIS as open data.
-
-  LVermGeo Sachsen-Anhalt's Open Data catalogue covers topographic maps, orthophotos,
-  terrain models and Basis-DLM — plus only these ALKIS *derivatives*:
-    · DVG           digitale Verwaltungsgrenzen (derived from ALKIS)
-    · Hausumringe   building footprints
-    · Hauskoordinaten
-  Parcel geometry and cadastral attributes need a formal request to LVermGeo, so there
-  is nothing here to download anonymously.
-
-  https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html
-EOF
-  exit 3
+  DATASET="${DATASET:-flurstueck}"
+  ENGINE=wfs2
+  # The service is the "vereinfacht" ALKIS schema (ALKIS-vereinfacht 2.0), not full NAS —
+  # geometry plus the core cadastral keys, no Punktinformationen and no Eigentümer.
+  SRC_URL="https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_ALKIS_WFS_OpenData/guest"
+  ATTRIB="© GeoBasis-DE / LVermGeo LSA, dl-de/by-2-0"
+  case "$DATASET" in
+    flurstueck) SRC_TYPE="ave:Flurstueck" ;;
+    gebaeude)   SRC_TYPE="ave:GebaeudeBauwerk" ;;
+    nutzung)    SRC_TYPE="ave:Nutzung" ;;
+    *) echo "ERROR: st datasets are: flurstueck, gebaeude, nutzung" >&2; exit 2 ;;
+  esac
+  echo "    NOTE: Sachsen-Anhalt publishes ALKIS as a service only — this dumps the WFS page by page."
 }
 
 plan_sh() {

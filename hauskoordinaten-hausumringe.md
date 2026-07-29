@@ -246,6 +246,10 @@ Verified 200, 141,904,618 B. Shape, EPSG:25832, **>1.6 M** records, 2×/year.
 `Hauskoordinaten.zip` at the same path → 404: HK is issued on request (68 €/200 objects) or
 via the ZSHH, **not** as a self-service file.
 
+Second route, added 2026-07-29: `ave:GebaeudeBauwerk` (~1.7 M) in the open ALKIS WFS —
+`./download_alkis.sh st gebaeude`. The ZIP is still the faster fetch; the WFS wins if you want
+footprints and parcels from one source with matching keys.
+
 ## Schleswig-Holstein — LVermGeo SH
 
 Both HU and HK are free, but only through an interactive **gaialight Downloadclient**:

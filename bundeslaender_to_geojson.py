@@ -103,7 +103,9 @@ COVERAGE = {
                lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
                lidar_note="Open since 2023 including classified laser scan, but the advertised "
                           "Atom endpoint was not locatable and the web UI caps selection at 5 tiles.",
-               alkis="none", alkis_engine=None, alkis_spatial="none"),
+               # ALKIS-vereinfacht 2.0 over an anonymous WFS 2.0 (ST_LVermGeo_ALKIS_WFS_OpenData):
+               # parcels, buildings and Nutzung, no Punktinformationen. Verified 2026-07-29.
+               alkis="full", alkis_engine="wfs2", alkis_spatial="exact"),
     "th": dict(name_short="Thueringen",
                lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
                lidar_note="gaialight app; overview.php/details.php need a 'type' key that is not "
