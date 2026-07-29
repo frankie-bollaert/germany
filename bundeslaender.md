@@ -104,6 +104,12 @@ Nutzung*), addresses. Each state runs its own, so each publishes it differently 
 all. Owner names (*Eigentümerangaben*) are **never** open data anywhere; what states release
 is the *ohne Eigentümer* (oE) variant.
 
+<img src="alkis_map.png" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 13 states publishing full vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only, red for ST which does not publish it at all" width="560">
+
+Thirteen states are green. The two orange ones are not a delivery problem — BY and RP publish
+their cadastre as **raster**, so the download works fine and parcel geometry simply is not in
+what arrives. Only ST is closed. Regenerate with `./coverage_map.py alkis`.
+
 Status verified live in July 2026. **"Login"** means a user account is needed to get the
 data; **"anonymous"** means plain HTTP with no credentials.
 
@@ -168,10 +174,11 @@ building footprints?** Footprint sources are detailed in
 
 <img src="coverage_map.png" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, SL, ST, TH) for no bulk LiDAR" width="560">
 
-Regenerate it with [`coverage_map.py`](coverage_map.py) after any coverage change — it reads
-`lidar_las`, `lidar_dgm1` and `alkis` straight out of `bundeslaender.geojson`, so the map
-follows the data rather than this table. Footprints are the one input it carries itself.
-`coverage_map.svg` is the same image as vector.
+Regenerate it with `./coverage_map.py all` after any coverage change — that script draws this
+map and the [ALKIS one](#alkis--cadastral-open-data-per-state) below, reading `lidar_las`,
+`lidar_dgm1`, `lidar_script` and `alkis` straight out of `bundeslaender.geojson`, so both
+follow the data rather than these tables. Footprints are the one input it carries itself.
+`coverage_map.svg` / `alkis_map.svg` are the same images as vector.
 
 | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |-------|-------------|------------|--------------------|------------------|

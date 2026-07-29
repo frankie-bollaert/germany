@@ -1,27 +1,38 @@
 #!/usr/bin/env python3
-"""Draw the coverage answer as a map: which states can we fetch all four datasets for?
+"""Draw this repo's per-state coverage as maps. Two of them, same geometry, same three tiers.
 
-The four datasets are point cloud (las), terrain (dgm1), plots (ALKIS Flurstuecke) and house
-structures (building footprints). README.md and bundeslaender.md answer that in prose and
-tables; this puts the same answer on geometry, in three colours:
+README.md and bundeslaender.md answer these questions in prose and tables; this puts the same
+answers on geometry, so a glance replaces a table read.
 
-  green   all four are scriptable today
-  orange  elevation works but one of the four is missing at the source
-  red     no bulk LiDAR endpoint at all -- these states are cadastre-only
+  coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
+            green  all four are scriptable today                                        (5)
+            orange elevation works, but one of the four is missing at the source         (4)
+            red    no bulk LiDAR endpoint at all -- these states are cadastre-only       (7)
 
-Red is about elevation, not about the state being useless: every red state except ST still
-publishes ALKIS openly. The legend says so, because "not supported" would be wrong.
+  alkis     what does the state's cadastre actually contain?
+            green  full vector ALKIS ohne Eigentuemer                                   (13)
+            orange raster cadastral map only -- a picture of the parcels, not geometry   (2)
+            red    not open data                                                         (1)
 
-Three of the four inputs are read from bundeslaender.geojson's own properties (lidar_las,
-lidar_dgm1, alkis) so the map cannot drift from the GeoJSON. Only footprints need a table
-here -- see HOUSES below.
+Red on the coverage map is about elevation, not about the state being useless: every red
+state except ST still publishes ALKIS openly. The legend says so, because "not supported"
+would be wrong. Orange on the alkis map is likewise not a delivery problem -- BY and RP
+publish their cadastre as raster, so the download works and the geometry simply is not in it.
+
+Inputs are read from bundeslaender.geojson's own properties (lidar_las, lidar_dgm1,
+lidar_script, alkis, alkis_engine, alkis_spatial) so the maps cannot drift from the GeoJSON.
+Only building footprints need a table here -- see HOUSES below.
 
 Boundaries come from bundeslaender.geojson (CRS84 lon/lat), so run
 bundeslaender_to_geojson.py first if it is missing.
 
-Usage : ./coverage_map.py [coverage_map.svg] [bundeslaender.geojson]
+Usage : ./coverage_map.py [coverage|alkis|all] [out.svg] [bundeslaender.geojson]
 
-Stdlib only. If qlmanage (macOS) or rsvg-convert is present, a PNG is written beside the SVG.
+  ./coverage_map.py            # coverage_map.svg + .png
+  ./coverage_map.py alkis      # alkis_map.svg + .png
+  ./coverage_map.py all        # both, to their default names
+
+Stdlib only. A PNG is written beside each SVG if rsvg-convert, Chromium or qlmanage is found.
 """
 import json
 import math
@@ -82,8 +93,8 @@ W, H, PAD = 620, 800, 14
 LEGEND_H = 96
 
 
-def classify(props, key):
-    """Return (tier, present, missing) for one state from its own GeoJSON properties.
+def classify_coverage(props, key):
+    """Return (tier, detail) for the all-four-datasets map.
 
     lidar_dgm1/lidar_las say the state *publishes* the product; lidar_script says this repo
     can actually fetch it in bulk. The map is about what we can fetch, so both are required --
@@ -97,12 +108,63 @@ def classify(props, key):
         "houses": HOUSES[key],
     }
     missing = [k for k, v in have.items() if not v]
+    detail = ", ".join(k for k, v in have.items() if v) or "none"
+    if missing:
+        detail += f" (missing: {', '.join(missing)})"
     if not missing:
-        return "full", have, missing
+        return "full", detail
     # No elevation at all is a different kind of gap from missing one product.
     if not have["point cloud"] and not have["terrain"]:
-        return "none", have, missing
-    return "partial", have, missing
+        return "none", detail
+    return "partial", detail
+
+
+# How finely download_alkis.sh can cut what a state publishes, spelled out for the tooltip.
+SPATIAL = {
+    "exact": "any bbox (service query)",
+    "tile": "1 km tile",
+    "flur": "per Flur",
+    "gemeinde": "per Gemeinde",
+    "gemarkung": "per Gemarkung",
+    "package": "whole package only",
+    "none": "n/a",
+}
+
+
+def classify_alkis(props, key):
+    """Return (tier, detail) for the cadastre map, straight off the GeoJSON's alkis fields.
+
+    'partial' is not a delivery problem here -- BY and RP publish their cadastre as raster
+    (Parzellarkarte / Liegenschaftskarte) with no bulk vector parcels. The download works
+    fine; what arrives is a picture of the parcels, not their geometry.
+    """
+    tier = {"full": "full", "partial": "partial", "none": "none"}[props["alkis"]]
+    if tier == "none":
+        return tier, "not open data -- parcels need a formal request"
+    what = "full vector oE" if tier == "full" else "raster cadastral map only"
+    return tier, (f"{what}; {props.get('alkis_engine') or '-'} engine, "
+                  f"{SPATIAL.get(props.get('alkis_spatial'), '?')}")
+
+
+# Each map is a classifier plus the words that go under it. Same geometry, same renderer.
+MAPS = {
+    "coverage": dict(
+        out="coverage_map.svg",
+        classify=classify_coverage,
+        heading="Point cloud + terrain + plots + house structures",
+        legend=[("full", "all four datasets"),
+                ("partial", "missing one of the four"),
+                ("none", "no bulk LiDAR - cadastre only")],
+    ),
+    "alkis": dict(
+        out="alkis_map.svg",
+        classify=classify_alkis,
+        heading="ALKIS cadastre - parcels, buildings, land use",
+        legend=[("full", "full vector cadastre (oE)"),
+                ("partial", "raster cadastral map only"),
+                ("none", "not open data")],
+    ),
+}
 
 
 def rings(geom):
@@ -154,8 +216,18 @@ def centroid(ring):
 
 
 def main():
-    out = sys.argv[1] if len(sys.argv) > 1 else "coverage_map.svg"
-    src = sys.argv[2] if len(sys.argv) > 2 else "bundeslaender.geojson"
+    argv = sys.argv[1:]
+    which = argv.pop(0) if argv and argv[0] in MAPS else "coverage"
+    if argv and argv[0] in ("-h", "--help", "all"):
+        if argv[0] == "all":
+            for name in MAPS:
+                sys.argv = [sys.argv[0], name]
+                main()
+            return
+        sys.exit(__doc__)
+    spec = MAPS[which]
+    out = argv[0] if argv else spec["out"]
+    src = argv[1] if len(argv) > 1 else "bundeslaender.geojson"
     if not os.path.exists(src):
         sys.exit(f"{src} not found -- run ./bundeslaender_to_geojson.py first")
 
@@ -179,7 +251,7 @@ def main():
     for f in feats:
         p = f["properties"]
         key = p["key"]
-        tier, have, missing = classify(p, key)
+        tier, detail = spec["classify"](p, key)
         counts[tier] += 1
         stroke, fill = TIERS[tier]
 
@@ -198,10 +270,7 @@ def main():
                 best_area, biggest = area, pts
             paths.append("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + "Z")
 
-        got = ", ".join(k for k, v in have.items() if v) or "none"
-        tip = f"{p['name']} - {tier}: {got}"
-        if missing:
-            tip += f" (missing: {', '.join(missing)})"
+        tip = f"{p['name']} - {tier}: {detail}"
         drawn.append((best_area,
                       f'  <path d="{"".join(paths)}" fill="{fill}" stroke="{stroke}" '
                       f'stroke-width="1.1" stroke-linejoin="round"><title>{tip}</title></path>'))
@@ -225,14 +294,9 @@ def main():
     body = [svg for _, svg in sorted(drawn, key=lambda d: -d[0])]
 
     ly = H - LEGEND_H + 30
-    legend = [
-        ('full', f'all four datasets ({counts["full"]})'),
-        ('partial', f'missing one of the four ({counts["partial"]})'),
-        ('none', f'no bulk LiDAR - cadastre only ({counts["none"]})'),
-    ]
-    leg = [f'  <text x="{PAD}" y="{ly - 14}" class="h">'
-           f'Point cloud + terrain + plots + house structures</text>']
-    for i, (tier, text) in enumerate(legend):
+    leg = [f'  <text x="{PAD}" y="{ly - 14}" class="h">{spec["heading"]}</text>']
+    for i, (tier, text) in enumerate(spec["legend"]):
+        text = f"{text} ({counts[tier]})"
         stroke, fill = TIERS[tier]
         y = ly + i * 20
         leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
