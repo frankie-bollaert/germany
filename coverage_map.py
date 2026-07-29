@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+"""Draw the coverage answer as a map: which states can we fetch all four datasets for?
+
+The four datasets are point cloud (las), terrain (dgm1), plots (ALKIS Flurstuecke) and house
+structures (building footprints). README.md and bundeslaender.md answer that in prose and
+tables; this puts the same answer on geometry, in three colours:
+
+  green   all four are scriptable today
+  orange  elevation works but one of the four is missing at the source
+  red     no bulk LiDAR endpoint at all -- these states are cadastre-only
+
+Red is about elevation, not about the state being useless: every red state except ST still
+publishes ALKIS openly. The legend says so, because "not supported" would be wrong.
+
+Three of the four inputs are read from bundeslaender.geojson's own properties (lidar_las,
+lidar_dgm1, alkis) so the map cannot drift from the GeoJSON. Only footprints need a table
+here -- see HOUSES below.
+
+Boundaries come from bundeslaender.geojson (CRS84 lon/lat), so run
+bundeslaender_to_geojson.py first if it is missing.
+
+Usage : ./coverage_map.py [coverage_map.svg] [bundeslaender.geojson]
+
+Stdlib only. If qlmanage (macOS) or rsvg-convert is present, a PNG is written beside the SVG.
+"""
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+
+# Scriptable building footprints, from hauskoordinaten-hausumringe.md (probed 2026-07-28).
+# This is the one input the GeoJSON does not carry. "True" means a direct anonymous URL or a
+# feed/WFS a script can drive -- not merely that the data is open.
+#
+# Note the overlap that makes the green tier bigger than it looks: ALKIS carries AX_Gebaeude,
+# so any state with full ALKIS already ships footprints inside the parcel package. The states
+# below that are True *without* full ALKIS (by, rp, st) have a standalone HU product instead.
+HOUSES = {
+    "bw": True,   # hu_bw.zip, direct
+    "by": True,   # 7 Regierungsbezirk ZIPs off the KML index
+    "be": True,   # ALKIS gebaeude WFS + HK-DE-format ZIP
+    "bb": True,   # inside the per-Landkreis ALKIS Shape packages
+    "hb": True,   # WFS only (wfs_alkis_hausumringe)
+    "hh": True,   # inside the quarterly ALKIS GML
+    "he": False,  # Downloadcenter needs a free account; ALKIS API exposes parcels, not buildings
+    "mv": True,   # dedicated Hausumringe Atom -> hu-mv.zip
+    "ni": True,   # priced as HU, but footprints come via the ALKIS gebaeude WFS
+    "nw": True,   # gru_vereinfacht GeoPackage per Kreis + gebref
+    "rp": True,   # HAUSUMRINGE_RP.zip with a .meta4
+    "sl": True,   # inside the per-Landkreis ALKIS packages
+    "sn": True,   # hu_sn_shape.zip (ranged GET -- the share 401s on HEAD)
+    "st": True,   # Hausumringe.zip, direct; no ALKIS to carry it
+    "sh": True,   # inside the statewide ALKIS GeoJSON
+    "th": False,  # HU/HK are CAPTCHA-gated; ALKIS Shape/NAS is not, but see note below
+}
+# th is False on footprints only because the standalone HU product is CAPTCHA-gated. Its
+# ALKIS packages do carry AX_Gebaeude, so th is arguably 3/4 -- it lands red either way,
+# since it has no bulk elevation at all, which is the stronger constraint.
+
+TIERS = {
+    "full":    ("#2e7d32", "#a5d6a7"),  # stroke, fill
+    "partial": ("#e65100", "#ffcc80"),
+    "none":    ("#b71c1c", "#ef9a9a"),
+}
+
+# Labels that do not fit inside their own polygon: (dx, dy) in output px from the centroid,
+# drawn with a leader line back to it. The city-states, plus Saarland.
+OFFSET_LABELS = {
+    "be": (82, -20),
+    "hh": (-52, -20),
+    "hb": (-54, -8),
+    "sl": (-46, 6),
+}
+
+# Labels that fit, but land on something: Berlin sits almost exactly on Brandenburg's
+# centroid, so BB's own label has to step aside. No leader line -- it stays inside BB.
+NUDGE = {"bb": (20, 82)}
+
+W, H, PAD = 620, 800, 14
+LEGEND_H = 96
+
+
+def classify(props, key):
+    """Return (tier, present, missing) for one state from its own GeoJSON properties.
+
+    lidar_dgm1/lidar_las say the state *publishes* the product; lidar_script says this repo
+    can actually fetch it in bulk. The map is about what we can fetch, so both are required --
+    that gap is the whole reason seven states are red while publishing elevation openly.
+    """
+    scripted = bool(props.get("lidar_script"))
+    have = {
+        "point cloud": scripted and bool(props.get("lidar_las")),
+        "terrain": scripted and bool(props.get("lidar_dgm1")),
+        "plots": props.get("alkis") == "full",
+        "houses": HOUSES[key],
+    }
+    missing = [k for k, v in have.items() if not v]
+    if not missing:
+        return "full", have, missing
+    # No elevation at all is a different kind of gap from missing one product.
+    if not have["point cloud"] and not have["terrain"]:
+        return "none", have, missing
+    return "partial", have, missing
+
+
+def rings(geom):
+    """Yield every exterior ring; holes are dropped (none matter at this scale)."""
+    if geom["type"] == "Polygon":
+        polys = [geom["coordinates"]]
+    else:
+        polys = geom["coordinates"]
+    for poly in polys:
+        if poly:
+            yield poly[0]
+
+
+def simplify(pts, tol):
+    """Douglas-Peucker. Keeps the SVG small enough to read as text."""
+    if len(pts) < 3:
+        return pts
+    ax, ay = pts[0]
+    bx, by = pts[-1]
+    dx, dy = bx - ax, by - ay
+    span = math.hypot(dx, dy)
+    worst, idx = -1.0, 0
+    for i in range(1, len(pts) - 1):
+        px, py = pts[i]
+        if span == 0:
+            d = math.hypot(px - ax, py - ay)
+        else:
+            d = abs(dy * px - dx * py + bx * ay - by * ax) / span
+        if d > worst:
+            worst, idx = d, i
+    if worst <= tol:
+        return [pts[0], pts[-1]]
+    return simplify(pts[:idx + 1], tol)[:-1] + simplify(pts[idx:], tol)
+
+
+def centroid(ring):
+    """Area-weighted centroid of a ring (shoelace)."""
+    a = cx = cy = 0.0
+    for i in range(len(ring) - 1):
+        x0, y0 = ring[i]
+        x1, y1 = ring[i + 1]
+        cross = x0 * y1 - x1 * y0
+        a += cross
+        cx += (x0 + x1) * cross
+        cy += (y0 + y1) * cross
+    if a == 0:
+        return ring[0]
+    return cx / (3 * a), cy / (3 * a)
+
+
+def main():
+    out = sys.argv[1] if len(sys.argv) > 1 else "coverage_map.svg"
+    src = sys.argv[2] if len(sys.argv) > 2 else "bundeslaender.geojson"
+    if not os.path.exists(src):
+        sys.exit(f"{src} not found -- run ./bundeslaender_to_geojson.py first")
+
+    feats = json.load(open(src, encoding="utf-8"))["features"]
+
+    # Equirectangular, scaled by cos(mid-latitude). Germany spans ~8 degrees of latitude, so
+    # this is within a couple of percent of a proper conic -- fine for a thumbnail, and it
+    # keeps the script dependency-free.
+    lats = [c[1] for f in feats for r in rings(f["geometry"]) for c in r]
+    lons = [c[0] for f in feats for r in rings(f["geometry"]) for c in r]
+    kx = math.cos(math.radians((min(lats) + max(lats)) / 2))
+    x0, x1 = min(lons) * kx, max(lons) * kx
+    y0, y1 = min(lats), max(lats)
+    scale = min((W - 2 * PAD) / (x1 - x0), (H - LEGEND_H - 2 * PAD) / (y1 - y0))
+    ox = PAD + ((W - 2 * PAD) - (x1 - x0) * scale) / 2
+
+    def project(lon, lat):
+        return (ox + (lon * kx - x0) * scale, PAD + (y1 - lat) * scale)
+
+    drawn, labels, counts = [], [], {"full": 0, "partial": 0, "none": 0}
+    for f in feats:
+        p = f["properties"]
+        key = p["key"]
+        tier, have, missing = classify(p, key)
+        counts[tier] += 1
+        stroke, fill = TIERS[tier]
+
+        biggest, best_area = None, -1.0
+        paths = []
+        for ring in rings(f["geometry"]):
+            pts = [project(c[0], c[1]) for c in ring]
+            pts = simplify(pts, 0.55)
+            if len(pts) < 4:
+                continue
+            area = abs(sum(pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1]
+                           for i in range(len(pts) - 1)) / 2)
+            if area < 3:                      # drop specks: small islands, sandbanks
+                continue
+            if area > best_area:
+                best_area, biggest = area, pts
+            paths.append("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + "Z")
+
+        got = ", ".join(k for k, v in have.items() if v) or "none"
+        tip = f"{p['name']} - {tier}: {got}"
+        if missing:
+            tip += f" (missing: {', '.join(missing)})"
+        drawn.append((best_area,
+                      f'  <path d="{"".join(paths)}" fill="{fill}" stroke="{stroke}" '
+                      f'stroke-width="1.1" stroke-linejoin="round"><title>{tip}</title></path>'))
+
+        cx, cy = centroid(biggest)
+        if key in OFFSET_LABELS:
+            # Leader lines go in the label layer, not the fill layer: Berlin sits inside
+            # Brandenburg and Hamburg inside Schleswig-Holstein, so anything drawn with the
+            # polygons gets painted over by the state that encloses it.
+            dx, dy = OFFSET_LABELS[key]
+            lx, ly = cx + dx, cy + dy
+            labels.append(f'  <line x1="{cx:.1f}" y1="{cy:.1f}" x2="{lx:.1f}" y2="{ly:.1f}" '
+                          f'stroke="{stroke}" stroke-width="0.8"/>')
+        else:
+            dx, dy = NUDGE.get(key, (0, 0))
+            lx, ly = cx + dx, cy + dy
+        labels.append(f'  <text x="{lx:.1f}" y="{ly + 3.5:.1f}" fill="{stroke}">'
+                      f'{key.upper()}</text>')
+
+    # Largest first, so the enclosed city-states stay visible.
+    body = [svg for _, svg in sorted(drawn, key=lambda d: -d[0])]
+
+    ly = H - LEGEND_H + 30
+    legend = [
+        ('full', f'all four datasets ({counts["full"]})'),
+        ('partial', f'missing one of the four ({counts["partial"]})'),
+        ('none', f'no bulk LiDAR - cadastre only ({counts["none"]})'),
+    ]
+    leg = [f'  <text x="{PAD}" y="{ly - 14}" class="h">'
+           f'Point cloud + terrain + plots + house structures</text>']
+    for i, (tier, text) in enumerate(legend):
+        stroke, fill = TIERS[tier]
+        y = ly + i * 20
+        leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
+                   f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>')
+        leg.append(f'  <text x="{PAD + 22}" y="{y}" class="l">{text}</text>')
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" \
+viewBox="0 0 {W} {H}" font-family="Helvetica,Arial,sans-serif">
+  <style>
+    text {{ font-size: 11px; font-weight: 600; text-anchor: middle; }}
+    text.l {{ font-size: 12px; font-weight: 400; text-anchor: start; fill: #333; }}
+    text.h {{ font-size: 12px; font-weight: 700; text-anchor: start; fill: #111; }}
+  </style>
+  <rect width="{W}" height="{H}" fill="#fff"/>
+{chr(10).join(body)}
+{chr(10).join(labels)}
+{chr(10).join(leg)}
+</svg>
+'''
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(svg)
+    print(f"{out}  {os.path.getsize(out) / 1024:.0f} KB  "
+          f"({counts['full']} full / {counts['partial']} partial / {counts['none']} none)")
+
+    rasterize(os.path.abspath(out), os.path.splitext(os.path.abspath(out))[0] + ".png")
+
+
+# Chromium before qlmanage on purpose: qlmanage -t always writes a *square* thumbnail, so a
+# 620x800 map comes back cropped and the legend is the part that gets cut.
+CHROMIUM = ["/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "chromium", "google-chrome", "chromium-browser"]
+
+
+def rasterize(svg, png):
+    if shutil.which("rsvg-convert"):
+        subprocess.run(["rsvg-convert", "-w", str(W * 2), svg, "-o", png], check=True)
+    else:
+        browser = next((b for b in CHROMIUM
+                        if os.path.exists(b) or shutil.which(b)), None)
+        if browser:
+            subprocess.run([browser, "--headless", "--disable-gpu", "--hide-scrollbars",
+                            "--force-device-scale-factor=2", f"--window-size={W},{H}",
+                            f"--screenshot={png}", f"file://{svg}"],
+                           check=True, capture_output=True)
+        elif shutil.which("qlmanage"):
+            subprocess.run(["qlmanage", "-t", "-s", str(W * 2),
+                            "-o", os.path.dirname(png) or ".", svg],
+                           check=True, capture_output=True)
+            if os.path.exists(svg + ".png"):
+                os.replace(svg + ".png", png)
+            print("note: qlmanage crops to a square -- the legend may be cut off. "
+                  "Install librsvg (brew install librsvg) for a faithful PNG.")
+        else:
+            print("no SVG rasterizer found (tried rsvg-convert, Chromium, qlmanage) "
+                  "-- SVG written, PNG skipped")
+            return
+    if os.path.exists(png):
+        print(f"{png}  {os.path.getsize(png) / 1024:.0f} KB")
+
+
+if __name__ == "__main__":
+    main()
