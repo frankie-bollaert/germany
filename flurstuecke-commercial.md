@@ -38,8 +38,8 @@ publishes an open ALKIS WFS, verified 2026-07-29. Bayern is the expensive one: *
 total bill for ~17% of the parcels**, and the single state no route makes free.
 
 What you also buy, for the 14 states you could have fetched yourself: one schema instead of
-fifteen, one CRS decision, one quarterly cycle, and no NAS parsing. That is the real product —
-convenience, not coverage.
+fifteen, one CRS decision, one quarterly cycle, and no [NAS](README.md#nas--the-exchange-format)
+parsing. That is the real product — convenience, not coverage.
 
 ---
 

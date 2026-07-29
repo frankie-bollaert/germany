@@ -257,7 +257,8 @@ DXF/Shape/NAS. Costs, licences, the free FS-DE test Shapefile and the wider comm
 `ave:GebaeudeBauwerk` (~1.7 M) and `ave:Nutzung` under DL-DE/BY 2.0. It is the
 **ALKIS-vereinfacht 2.0** schema rather than full NAS — geometry plus the cadastral keys
 (`flstkennz`, `gemarkung`, `flur`, `flaeche`, `lagebeztxt`), no Punktinformationen — which is
-the same trade NW's `gru_vereinfacht` and SH's GeoJSON make. Verified 2026-07-29.
+the same trade NW's `gru_vereinfacht` and SH's GeoJSON make; see
+[NAS — the exchange format](#nas--the-exchange-format). Verified 2026-07-29.
 
 Two portals do sit behind a login, but neither is the only route to their state's data:
 
@@ -585,7 +586,7 @@ download engines:
 |--------|--------|-----------|
 | `aria2` | `bw` `by` `bb` `hh` `mv` `nw` `sl` `sn` `sh` `th` | build a file list, hand it to `aria2c` |
 | `metalink` | `rp` | official `.meta4` with per-file **SHA-256** → `aria2c --check-integrity` |
-| `wfs2` | `be` `ni` | WFS 2.0 paged with `COUNT`/`STARTINDEX` → one GML per page |
+| `wfs2` | `be` `ni` `st` | WFS 2.0 paged with `COUNT`/`STARTINDEX` → one GML per page |
 | `wfs1` | `hb` | WFS 1.1 has no standard paging; Bremen fits in one request |
 | `ogcapi` | `he` | OGC API Features, follow `rel="next"` → one GeoJSON per page |
 
@@ -604,6 +605,69 @@ state publishes as its index:
 
 Only RP publishes checksums, so only `rp` is hash-verified; everywhere else downloads are
 parallel, resumable (`--continue`) and size-checked.
+
+# NAS — the exchange format
+
+Most of what `download_alkis.sh` fetches is **NAS**, and half the ALKIS tables above turn on
+the difference between NAS and a *vereinfacht* derivative. Worth knowing what it is.
+
+**NAS = Normbasierte Austauschschnittstelle**, "standards-based exchange interface". It is not
+a container like Shapefile or GeoPackage — it is a **GML 3.2.1 application schema** with its
+own object model *and its own update protocol*, defined by the AdV in the **GeoInfoDok** on top
+of the ISO 19100 series (19107 geometry, 19109 application-schema rules, 19136 GML).
+
+One format serves all three official datasets, together the **AAA model**:
+
+| | |
+|---|---|
+| **AFIS** | Festpunkte — geodetic control |
+| **ALKIS** | the cadastre — what this script fetches |
+| **ATKIS** | the topographic landscape model (Basis-DLM) |
+
+So the `.xml` inside `alkis_sn.zip` and a Basis-DLM delivery are the same format carrying
+different *Fachschemata*. The schema splits into a fach-neutral **Basisschema** (generic object
+properties) and a **Fachschema** (the domain classes), which is why every NAS object shares the
+same lifecycle machinery whatever it describes.
+
+**Versions.** The AdV reference version has been **7.1** (AAA-AS 7.1.2) since 2024-01-01;
+**GeoInfoDok 6.0.1** is still what a lot of deployed data and tooling speaks. When a vendor
+advertises "GeoInfoDok 7 konform", that migration is what they mean.
+
+## Full NAS vs. `vereinfacht`
+
+This is the distinction behind ST's row in the [ALKIS table](#3-alkis--cadastre-availability),
+NW's `gru_vereinfacht` GeoPackage and SH's statewide GeoJSON:
+
+| | Full NAS | `vereinfacht` |
+|---|---|---|
+| **Object model** | relational — `AX_Flurstueck` *points at* its `AX_Buchungsstelle`, `AX_LagebezeichnungMitHausnummer`, `AX_TatsaechlicheNutzung` | flattened into one feature type with attributes |
+| **Punktinformationen** | `AX_Grenzpunkt`, `AX_Punktort` — surveyed boundary points with accuracy metadata | dropped; you get the polygon, not the points that define it |
+| **Grundbuch linkage** | `AX_Buchungsstelle` / `AX_Buchungsblatt`, the chain from parcel to land register | dropped |
+| **Lifecycle** | every object carries `gml:id`, `lebenszeitintervall` (`beginnt`/`endet`), `modellart`, `anlass` — objects are temporal | a snapshot |
+| **Updates** | **NBA** (*Nutzerbezogene Bestandsdatenaktualisierung*) — differential insert/replace/delete against a subscription | re-download everything |
+| **Full extract** | **BDA** (*Bestandsdatenauszug*) | the only mode |
+
+That NBA/BDA split is why NAS is a *transaction* format rather than a file format: it carries
+WFS-Transaction-style operations so a licensee's copy tracks the cadastre continuously. **No
+state offers NBA over an open endpoint**, so everything here is a BDA-style snapshot — which is
+also why "never cache a tile list" in [Notes](#notes) is the only sync strategy available.
+
+Owner data is orthogonal to all of this: `AX_Person` / `AX_Namensnummer` exist in the full
+model but are stripped from every *ohne Eigentümer* variant, NAS or not.
+
+## Why simplified products exist at all
+
+NAS is verbose, deeply nested, and needs a real parser. GDAL ships a dedicated `NAS` driver,
+but it is a Xerces-based build option that is not always compiled in; the common alternative is
+**PostNAS / norGIS ALKIS-Import** into PostGIS. Ordinary GIS tooling cannot open a NAS file
+usefully, which is why states publish a flat derivative beside it — geometry plus the keys you
+actually join on, and nothing else. For ST that is `flstkennz`, `gemarkung`, `flur`, `flaeche`,
+`lagebeztxt`.
+
+For bulk work that trade is almost always the right one. Reach for full NAS only if you need
+boundary-point accuracy, the Grundbuch chain, or change tracking. `download_alkis.sh` fetches
+full NAS where it is offered — `bw` `bb` `mv` `ni` `nw` `sl` `sn` `th` — and the simplified
+product where that is all a state publishes.
 
 # The 16 Bundesländer
 
