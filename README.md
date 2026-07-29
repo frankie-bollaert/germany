@@ -12,6 +12,12 @@ cloud-optimized formats.
 All LiDAR downloaders feed the same converter (`convert_to_cloud_optimized.sh`) and the
 same output tree.
 
+**Want all four datasets — point cloud, terrain, parcels, building footprints — for the same
+state?** Five states can deliver the whole set: **BB, BE, MV, NW, SN**. The crossing table,
+the near-misses (RP and BY have no vector parcels; BW and NI no point cloud) and the two
+commands it takes are in
+[`bundeslaender.md`](bundeslaender.md#complete-coverage--the-states-where-all-four-datasets-are-fetchable).
+
 # LiDAR / terrain
 
 ## Coverage: all 16 Bundesländer

@@ -157,6 +157,55 @@ Niedersachsen, Hessen.
 All ALKIS data above is in **ETRS89 / UTM** (EPSG:25832, EPSG:25833 in the east).
 See `download_alkis.sh` for the downloader and `README.md` for usage.
 
+## Complete coverage — the states where all four datasets are fetchable
+
+The three sections above each answer one dataset at a time. This one answers the crossing
+question: **for which states can we fetch point cloud *and* terrain *and* parcels *and*
+building footprints?** Footprint sources are detailed in
+[`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md).
+
+**Five states: Brandenburg, Berlin, Mecklenburg-Vorpommern, Nordrhein-Westfalen, Sachsen.**
+
+| State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
+|-------|-------------|------------|--------------------|------------------|
+| **Brandenburg** (BB) | ✅ `download_bb_lidar.sh` | ✅ same | ✅ `download_alkis.sh bb` — NAS/Shape, 18 Landkreise | ✅ inside that same ALKIS package |
+| **Berlin** (BE) | ✅ `download_be_lidar.sh` | ✅ same | ✅ `download_alkis.sh be flurstuecke` — WFS 2.0 | ✅ `… be gebaeude`; also an HK-DE-format ZIP |
+| **Mecklenburg-Vorp.** (MV) | ✅ `download_mv_lidar.sh` | ✅ same | ✅ `download_alkis.sh mv` — NAS, ~750 Gemeinden | ✅ that package, plus a dedicated HU Atom ZIP |
+| **Nordrhein-Westf.** (NW) | ✅ `download_nrw_lidar.sh` | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |
+| **Sachsen** (SN) | ✅ `download_sn_lidar.sh` | ✅ same | ✅ `download_alkis.sh sn` — NAS, one statewide ZIP | ✅ that package, plus standalone HU/HK ZIPs |
+
+Footprints are never a separate fetch in these five: ALKIS carries `AX_Gebaeude`, so the
+parcel download brings them along. The extra products in the last column are convenience —
+smaller, simpler files than a full NAS package for anyone who wants only footprints.
+
+Picking between them: **NW** is the strongest — every product carries a machine-readable
+index, and DL-DE/Zero 2.0 means no attribution obligation. **BE** is the fastest to fetch
+end to end (~0.2 GB of DGM1, 9 point-cloud packages, WFS cadastre) and also DL-DE/Zero, which
+makes it the natural smoke test for a full four-dataset pipeline. **BB** carries one caveat:
+its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,291-tile DGM1
+grid, released campaign by campaign.
+
+### Why the other eleven fall short
+
+| State | Missing | Detail |
+|-------|---------|--------|
+| Rheinland-Pfalz | plots | Everything else is present and RP is the best-engineered source in the repo (Metalink-4 with SHA-256 for LiDAR *and* Hausumringe) — but the cadastre is published as a **rasterised** Liegenschaftskarte. No bulk vector parcels; geometry only per-query via the Flurstückssuche WFS. |
+| Bayern | plots | Same single gap: ALKIS-Parzellarkarte is raster-only, vector parcels are sold through GeodatenOnline. Hausumringe are open (CC BY 4.0); Hauskoordinaten are priced. |
+| Baden-Württemberg | point cloud | Full ALKIS + HU + HK, 125 GB of DGM1 — but the `3DM` point cloud is flagged inactive and every URL 404s. |
+| Niedersachsen | point cloud | STAC exposes `dgm1` only. Cadastre and footprints are fine (`gebaeude` WFS); the standalone HK/HU products are priced. |
+| TH, SH, ST, HE, HH, HB, SL | point cloud + DTM | No anonymous bulk LiDAR endpoint found — portals, CAPTCHAs and order clients, not access restrictions. ST additionally has no open ALKIS at all. |
+
+### Fetching all four today
+
+There is no single command for it. `download_samples.sh` drives only the LiDAR side, because
+`download_alkis.sh` has no `BBOX` support — parcels and footprints are per-state or
+per-package until that lands. For one of the five states, the full set is:
+
+```bash
+./download_<key>_lidar.sh both ./samples/<key>    # point cloud + terrain
+./download_alkis.sh <key>                         # parcels + building footprints
+```
+
 ## Notes
 
 - Area and population figures are rounded; population is roughly early-2020s.
