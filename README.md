@@ -89,11 +89,12 @@ per-package until that lands. For one of the five states, the full set is:
 The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
 whether you have to click through an interactive portal.
 
-<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SN) for point cloud plus terrain, orange (BW, NI) for terrain only, red (HB, HE, HH, SH, SL, ST, TH) for open data with no bulk endpoint" width="560">
+<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SN) for point cloud plus terrain, orange (HB, HE, HH, SH, SL, ST, TH) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
 
-Green is the seven states with both products scripted; orange is BW and NI, which are scripted
-but publish no point cloud; red is the seven that publish elevation openly but only through a
-portal. Regenerate with `./coverage_map.py lidar`.
+Green is the seven states with both products scripted. Orange is the seven that publish
+elevation openly but only through a portal — everything is there, just not scriptably. Red is
+BW and NI, which are scripted and working but publish **no point cloud at all**, so there is
+nothing further to fetch however you ask. Regenerate with `./coverage_map.py lidar`.
 
 Legend below: ✅ available and scripted · ⚠️ open but no bulk endpoint found · ❌ not published.
 

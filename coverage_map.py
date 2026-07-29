@@ -11,18 +11,21 @@ the answers on geometry, so a glance replaces a table read.
 
   lidar     what elevation can a script actually fetch in bulk?
             green  point cloud + terrain                                                 (7)
-            orange terrain only -- the state publishes no point cloud                    (2)
-            red    open, but no bulk endpoint -- interactive portal only                 (7)
+            orange open, but no bulk endpoint -- interactive portal only                 (7)
+            red    terrain only -- the state publishes no point cloud                    (2)
 
   alkis     what does the state's cadastre actually contain?
             green  full vector ALKIS ohne Eigentuemer                                   (13)
             orange raster cadastral map only -- a picture of the parcels, not geometry   (2)
             red    not open data                                                         (1)
 
-Red never means "closed" except on the alkis map. All 16 states publish elevation openly, so
-the lidar map's red tier is about delivery mechanics -- portals, CAPTCHAs, order clients --
-and the coverage map's red tier is the same states seen through the four-dataset question.
-Orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
+Colour is per-map, not per-tier, because "worst" is a different question on each. The lidar
+map inverts the other two: red is the state with no point cloud to fetch, orange the one
+behind a portal, since a portal state still has every product -- just not scriptably -- while
+a state that publishes no point cloud has nothing more to give however you ask.
+
+Red never means "closed" except on the alkis map. All 16 states publish elevation openly, and
+orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
 as raster, so the download works and the geometry simply is not in it. The legends say so,
 because "not supported" would be wrong in every one of those cases.
 
@@ -79,10 +82,12 @@ HOUSES = {
 # ALKIS packages do carry AX_Gebaeude, so th is arguably 3/4 -- it lands red either way,
 # since it has no bulk elevation at all, which is the stronger constraint.
 
-TIERS = {
-    "full":    ("#2e7d32", "#a5d6a7"),  # stroke, fill
-    "partial": ("#e65100", "#ffcc80"),
-    "none":    ("#b71c1c", "#ef9a9a"),
+# (stroke, fill). Which tier gets which colour is a per-map decision -- see each map's legend
+# in MAPS below -- because "worst" is not the same question on every map.
+PALETTE = {
+    "green":  ("#2e7d32", "#a5d6a7"),
+    "orange": ("#e65100", "#ffcc80"),
+    "red":    ("#b71c1c", "#ef9a9a"),
 }
 
 # Labels that do not fit inside their own polygon: (dx, dy) in output px from the centroid,
@@ -137,8 +142,9 @@ def classify_lidar(props, key):
     """Return (tier, detail) for the elevation map.
 
     The split that matters is not open/closed -- all 16 publish elevation openly -- but
-    whether a script can reach it in bulk. Hence red is "no bulk endpoint", and the two
-    orange states are scripted, just with no point cloud published to fetch.
+    whether a script can reach it in bulk, and then whether both products are there to reach.
+    See this map's legend in MAPS for which tier gets which colour; it is not the same
+    assignment as the other two maps.
     """
     script = props.get("lidar_script")
     if not script:
@@ -177,31 +183,35 @@ def classify_alkis(props, key):
                   f"{SPATIAL.get(props.get('alkis_spatial'), '?')}")
 
 
-# Each map is a classifier plus the words that go under it. Same geometry, same renderer.
+# Each map is a classifier plus the words and colours that go under it. Same geometry, same
+# renderer. Legend rows are (tier, colour, label) and render top-to-bottom in this order.
 MAPS = {
     "coverage": dict(
         out="coverage_map.svg",
         classify=classify_coverage,
         heading="Point cloud + terrain + plots + house structures",
-        legend=[("full", "all four datasets"),
-                ("partial", "missing one of the four"),
-                ("none", "no bulk LiDAR - cadastre only")],
+        legend=[("full", "green", "all four datasets"),
+                ("partial", "orange", "missing one of the four"),
+                ("none", "red", "no bulk LiDAR - cadastre only")],
     ),
     "lidar": dict(
         out="lidar_map.svg",
         classify=classify_lidar,
         heading="LiDAR / terrain — what a script can fetch in bulk",
-        legend=[("full", "point cloud + terrain"),
-                ("partial", "terrain only — no point cloud published"),
-                ("none", "open, but no bulk endpoint — portal only")],
+        # Red is "terrain only" here, not "no bulk endpoint" -- the inverse of the other two
+        # maps. A state with no point cloud published has nothing more to give; one behind a
+        # portal has all of it, just not scriptably, so it is the milder of the two.
+        legend=[("full", "green", "point cloud + terrain"),
+                ("none", "orange", "open, but no bulk endpoint — portal only"),
+                ("partial", "red", "terrain only — no point cloud published")],
     ),
     "alkis": dict(
         out="alkis_map.svg",
         classify=classify_alkis,
         heading="ALKIS cadastre - parcels, buildings, land use",
-        legend=[("full", "full vector cadastre (oE)"),
-                ("partial", "raster cadastral map only"),
-                ("none", "not open data")],
+        legend=[("full", "green", "full vector cadastre (oE)"),
+                ("partial", "orange", "raster cadastral map only"),
+                ("none", "red", "not open data")],
     ),
 }
 
@@ -286,13 +296,14 @@ def main():
     def project(lon, lat):
         return (ox + (lon * kx - x0) * scale, PAD + (y1 - lat) * scale)
 
+    colour = {tier: PALETTE[name] for tier, name, _ in spec["legend"]}
     drawn, labels, counts = [], [], {"full": 0, "partial": 0, "none": 0}
     for f in feats:
         p = f["properties"]
         key = p["key"]
         tier, detail = spec["classify"](p, key)
         counts[tier] += 1
-        stroke, fill = TIERS[tier]
+        stroke, fill = colour[tier]
 
         biggest, best_area = None, -1.0
         paths = []
@@ -335,9 +346,9 @@ def main():
 
     ly = H - LEGEND_H + 30
     leg = [f'  <text x="{PAD}" y="{ly - 14}" class="h">{spec["heading"]}</text>']
-    for i, (tier, text) in enumerate(spec["legend"]):
+    for i, (tier, name, text) in enumerate(spec["legend"]):
         text = f"{text} ({counts[tier]})"
-        stroke, fill = TIERS[tier]
+        stroke, fill = PALETTE[name]
         y = ly + i * 20
         leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
                    f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>')
