@@ -36,9 +36,25 @@
 #   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
 #                  Single-dataset runs only — with "both" the two products would collide.
 #                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
-#   BBOX="minLon,minLat,maxLon,maxLat"   # WGS84 degrees — the STAC API's own filter,
-#                                        # NOT the UTM-km BBOX the other state scripts take
+#   BBOX="minE,minN,maxE,maxN"           # UTM32 kilometres, inclusive — the same interface
+#                                        # every other state script takes. Also accepts
+#                                        # "minLon,minLat,maxLon,maxLat" in WGS84 degrees;
+#                                        # the two are told apart by magnitude (see below).
 #   LATEST=0                             # keep EVERY campaign year (see below); default 1
+#
+# Two BBOX units, because the STAC API and the rest of this repo disagree. The API filters
+# only in WGS84 degrees, while every other downloader — and sample_squares.tsv — speaks UTM
+# kilometres. Both are accepted here:
+#
+#   degrees  all four values <= 180. Passed to the API as its own `bbox`, so the server does
+#            the filtering and only matching pages are fetched.
+#   UTM km   anything larger. The API cannot filter on it, but every item name carries its
+#            UTM tile key (dgm1_32_601_5752_1_ni_2018 -> 601, 5752), so the filter is applied
+#            to that instead. Exact, and needs no coordinate transform — but it costs a walk
+#            of the whole catalogue (~94 pages) to find a handful of tiles.
+#
+# Germany spans roughly 6-15 degrees east and 47-55 north, against UTM eastings of 280-900 km
+# and northings of 5,230-6,100 km, so the two ranges cannot be confused.
 #
 # Campaign years: the catalogue holds ~70,000 items for ~48,000 km² because a km² that has
 # been reflown appears once per campaign (dgm1_32_554_5802_1_ni_2016 and
@@ -73,9 +89,23 @@ import sys, json, re, urllib.request, urllib.parse
 
 stac, out, bbox, latest = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] != "0"
 
+# Degrees go to the server; UTM kilometres are filtered here against each item's tile key.
+tile_box = None
 params = {"limit": "500"}
 if bbox:
-    params["bbox"] = bbox
+    try:
+        vals = [float(v) for v in bbox.split(",")]
+    except ValueError:
+        sys.exit(f"ERROR: BBOX must be four comma-separated numbers, got {bbox!r}")
+    if len(vals) != 4:
+        sys.exit(f"ERROR: BBOX needs four values, got {len(vals)}")
+    if all(abs(v) <= 180 for v in vals):
+        params["bbox"] = bbox
+        print(f"    bbox: {bbox} (WGS84 degrees, filtered by the API)", file=sys.stderr)
+    else:
+        tile_box = [int(v) for v in vals]
+        print(f"    bbox: {bbox} (UTM32 km, filtered on tile keys — walks the full catalogue)",
+              file=sys.stderr)
 url = f"{stac}/collections/dgm1/items?" + urllib.parse.urlencode(params)
 
 # dgm1_32_554_5802_1_ni_2016.tif -> tile key (554, 5802), campaign year 2016
@@ -84,6 +114,7 @@ name_re = re.compile(r"_32_(\d+)_(\d+)_1_ni_(\d{4})\.")
 found = []       # (href, name)
 best = {}        # (e, n) -> (year, index into found)
 pages = 0
+unplaceable = 0  # items with no parseable tile key, only counted when filtering on one
 while url:
     with urllib.request.urlopen(url, timeout=120) as r:
         doc = json.load(r)
@@ -93,9 +124,17 @@ while url:
             continue
         href = asset["href"]
         name = href.rsplit("/", 1)[-1]
+        m = name_re.search(name)
+        if tile_box is not None:
+            # No tile key means no way to place it, so it cannot be shown to be inside.
+            if not m:
+                unplaceable += 1
+                continue
+            e, n_ = int(m.group(1)), int(m.group(2))
+            if not (tile_box[0] <= e <= tile_box[2] and tile_box[1] <= n_ <= tile_box[3]):
+                continue
         idx = len(found)
         found.append((href, name))
-        m = name_re.search(name)
         if not m:
             best[("raw", idx)] = (0, idx)       # unparseable name: always keep
             continue
@@ -104,7 +143,7 @@ while url:
         if prev is None or year > prev[0]:
             best[(e, n_)] = (year, idx)
     pages += 1
-    print(f"\r    paged {pages} page(s), {len(found)} items", end="", file=sys.stderr)
+    print(f"\r    paged {pages} page(s), {len(found)} item(s) kept", end="", file=sys.stderr)
     url = next((l["href"] for l in doc.get("links", []) if l.get("rel") == "next"), None)
 print("", file=sys.stderr)
 

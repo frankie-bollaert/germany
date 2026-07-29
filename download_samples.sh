@@ -14,6 +14,11 @@
 #     the square and plan the whole state. download_rlp_lidar.sh ignores it outright
 #     (32.8 GB of dgm1, 5.18 TB of las), and two others ignore it for one dataset only:
 #     by/dgm1 (216.9 GB) and be/las. All are detected and refused, not skipped quietly.
+#   · A square can also land in a hole in a state's coverage. That plans zero tiles and
+#     reports success, which is indistinguishable from a finished download until you look
+#     in the directory. Every combination is checked and the empty ones are listed at the
+#     end. bb/las does this at LAS_KM=3: Brandenburg's ALS is still partial, so the centred
+#     core at Luebbenau is empty while the full 5 km square has 5 tiles.
 #
 # Point cloud is sampled smaller than terrain on purpose. A 5x5 km las square is ~2.4 GB per
 # state and ~150 M points -- far past what a sample is for -- so las takes a centred core.
@@ -109,14 +114,26 @@ run_one() {
   local key="$1" place="$2" ds="$3" bbox="$4" script="$5"
   echo
   echo "==> $key  $ds  ($place)  BBOX=$bbox"
-  if ! DRY_RUN="$DRY_RUN" BBOX="$bbox" ./"$script" "$ds" "$OUTROOT/$key"; then
+  mkdir -p "$OUTROOT/$key"
+  local log="$OUTROOT/$key/.$ds.plan"
+  if ! DRY_RUN="$DRY_RUN" BBOX="$bbox" ./"$script" "$ds" "$OUTROOT/$key" 2>&1 | tee "$log"; then
     echo "    FAILED: $script $ds" >&2
+    rm -f "$log"
     return 1
   fi
+  # A square that lands in a coverage hole plans zero tiles and still reports success. That
+  # is the failure mode this script exists to prevent, so name it instead of letting an
+  # empty directory look like a finished download. Not hypothetical: bb/las at Luebbenau
+  # yields nothing at LAS_KM=3, and 5 tiles across the full 5 km square.
+  if grep -qE '(tiles|files): 0( |$)' "$log"; then
+    ZERO+=("$key  $ds — planned 0 tiles: this square sits in a gap in the state's coverage")
+  fi
+  rm -f "$log"
 }
 
 ok=0; failed=0; no_script=0; no_bbox=0; no_product=0
 declare -a NOTES=()
+declare -a ZERO=()
 
 while IFS=$'\t' read -r key epsg bbox place why; do
   [[ "$key" == \#* || -z "${key// }" ]] && continue
@@ -167,6 +184,11 @@ echo "skipped: $no_script no downloader · $no_bbox no BBOX · $no_product produ
 if [[ ${#NOTES[@]} -gt 0 ]]; then
   echo
   printf '  %s\n' "${NOTES[@]}"
+fi
+if [[ ${#ZERO[@]} -gt 0 ]]; then
+  echo
+  echo "empty squares — planned successfully, but there is nothing there to fetch:"
+  printf '  %s\n' "${ZERO[@]}"
 fi
 [[ "$DRY_RUN" == "1" ]] && echo && echo "DRY_RUN=1 — nothing was transferred."
 echo
