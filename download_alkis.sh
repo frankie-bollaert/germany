@@ -37,7 +37,7 @@
 #   th   Thüringen                full oE, per Flur         anon    ATOM -> zip (Shape/NAS)
 #
 # No state requires a login for the data this script fetches. Two states are incomplete at
-# the source (by, rp) and one publishes no ALKIS at all (st) — see bundeslaender.md.
+# the source (by, rp) and one publishes no ALKIS at all (st) — see README.md.
 #
 # Usage : ./download_alkis.sh <state> [dataset] [output_dir]
 #   ./download_alkis.sh nw                  # NRW, NAS, -> ./alkis/nw

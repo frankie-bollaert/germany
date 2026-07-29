@@ -74,7 +74,7 @@ address data. Coverage is **good but not complete**, and every state does it dif
 
 ✅ = scriptable direct URL, verified · ⚠️ = open but needs a service call, session or login ·
 ❌ = not available as open data · IDs are ISO 3166-2 without `DE-`, as everywhere else in this
-repo — see [The state ID](bundeslaender.md#the-state-id)
+repo — see [The state ID](README.md#the-state-id)
 
 **Scriptable today: 9 states for HU, 5 states for HK.**
 
