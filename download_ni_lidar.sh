@@ -33,6 +33,9 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   BBOX="minLon,minLat,maxLon,maxLat"   # WGS84 degrees — the STAC API's own filter,
 #                                        # NOT the UTM-km BBOX the other state scripts take
 #   LATEST=0                             # keep EVERY campaign year (see below); default 1
@@ -59,7 +62,7 @@ command -v aria2c >/dev/null 2>&1 || {
 }
 
 fetch_dgm1() {
-  local dir="$OUTROOT/dgm1"
+  local dir="${OUTDIR:-$OUTROOT/dgm1}"
   echo "==> dgm1"
   echo "    STAC: $STAC/collections/dgm1/items"
   mkdir -p "$dir"

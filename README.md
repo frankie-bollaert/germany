@@ -9,6 +9,7 @@ found, not because the data is gated.
 |------|------------|----------|
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
+| **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
 
@@ -23,6 +24,93 @@ then, and every script recomputes them at runtime (`DRY_RUN=1`).
 1. [Complete coverage — all four datasets](#1-complete-coverage--all-four-datasets)
 2. [LiDAR / terrain availability](#2-lidar--terrain-availability)
 3. [ALKIS / cadastre availability](#3-alkis--cadastre-availability)
+
+---
+
+# Downloading everything
+
+The per-state scripts each take one state and one dataset. `download_all.sh` walks the whole
+matrix — 29 ALKIS combinations across 16 states, 16 LiDAR combinations across 9 — into one
+state-major tree:
+
+```
+<root>/alkis/<id>-<dataset>/      ./alkis/nw-nas, ./alkis/bw-shape, ./alkis/st-flurstueck
+<root>/lidar/<id>-<dataset>/      ./lidar/nw-dgm1, ./lidar/rp-las
+```
+
+```bash
+./download_all.sh --list                 # the matrix, its sizes, and where each part lands
+./download_all.sh alkis                  # 29 combinations, ~132 GB + 23 M streamed features
+./download_all.sh dgm1                   # 9 terrain models, ~600 GB
+./download_all.sh all /mnt/big           # everything, including 12 TB+ of point cloud
+
+DRY_RUN=1 ./download_all.sh all          # every sub-script prints its plan, downloads nothing
+ONLY=nw,bw ./download_all.sh alkis       # two states only
+SKIP=by,rp ./download_all.sh alkis       # drop the two states with no vector Flurstücke
+```
+
+## Only parcels and building footprints
+
+`cadastre` is the ALKIS group narrowed to products that hold parcels or building footprints,
+and `FORMAT=` picks one of the two exports where a state publishes both:
+
+```bash
+FORMAT=simple ./download_all.sh cadastre --list   # 19 products, ~35.6 GB
+FORMAT=nas    ./download_all.sh cadastre          # same 19, full NAS instead: ~63.6 GB
+              ./download_all.sh alkis             # everything ALKIS: 29 products, ~132.4 GB
+```
+
+Restricting is only partly the downloader's decision — most states do not offer the choice:
+
+| How the state publishes | States | What you can ask for |
+|-------------------------|--------|----------------------|
+| Separate endpoint per object class | BE, NI, ST | Parcels and footprints, each on its own |
+| Separate endpoint, parcels only | HB, HE | Parcels; no footprint endpoint in these two |
+| Standalone footprint product only | BY (`hausumringe`), RP (`hu`) | Footprints; neither publishes open vector parcels |
+| One package, every object class | BW, BB, HH, MV, NW, SL, SN, TH | Nothing narrower than the whole package |
+
+For that last group the restriction has to happen after the download, not during it:
+
+```bash
+ogr2ogr -f GPKG parcels_buildings.gpkg 202601_gru_vereinf_05114000_Krefeld_EPSG25832.gpkg \
+        Flurstueck GebauedeBauwerk
+```
+
+Those layer names are from the NRW GeoPackage, which carries `Flurstueck`, `FlurstueckPunkt`,
+`GebauedeBauwerk`, `KatasterBezirk`, `Nutzung`, `NutzungFlurstueck` and `VerwaltungsEinheit` —
+five of the seven layers are not parcels or footprints. In full NAS the equivalent classes are
+`AX_Flurstueck` and `AX_Gebaeude`.
+
+What `WANT=` drops outright: BY's `tn` (land use, 5.4 GB) and `verwaltung`, HE's `zoning`,
+ST's `nutzung`, and RP's `lika` — a 30.7 GB rasterised cadastral map, the single largest
+saving. `FORMAT=` then drops the duplicate export for BW, BB, NW, SL and TH, which is another
+~37 GB of the same content in a second file format.
+
+### Schleswig-Holstein is a two-step source
+
+`download_alkis.sh sh` fetches `ALKIS_SH_Massendownload.geojson`, and despite the name that
+file is an **index, not the cadastre**: one polygon per Flur, each feature carrying a
+`LINK_DATA` URL to that Flur's NAS `.xml.gz`.
+
+```json
+{ "GEMARKUNG": "Ellhöft", "FLUR": "015515003", "DATUM": "2026-07-10",
+  "LINK_DATA": ".../massen.php?file=015515003.xml.gz&id=1&live=07_2026" }
+```
+
+Fetching one of those packages confirms the cadastre is behind the link — Flur `015515003`
+carries 88 `AX_Flurstueck` and 2 `AX_Gebaeude`. So SH parcels and footprints need a second
+pass over the index that `download_alkis.sh` does not yet make; `download_all.sh` prints this
+caveat when it selects the state.
+
+One flat directory per product is not just tidiness. The four ALKIS states served by a WFS or
+OGC API (BE, HE, NI, ST) page their output into `part-00001.gml` whatever dataset was asked
+for, so two of their datasets sharing a directory would overwrite each other silently. The
+`<id>-<dataset>` leaf makes that impossible.
+
+A failing combination is logged to `<root>/.download_all.failures` and the walk continues;
+re-running the same command retries it and resumes everything else. The only change this makes
+to the per-state scripts is `OUTDIR=` — set it yourself and any of them writes straight into
+the path you give instead of appending its own subdirectory.
 
 ---
 
@@ -74,7 +162,7 @@ endpoint found · ❌ not published as open data.
 | **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **TH** | Thüringen | ⚠️ `gaialight` app, inventory not derivable | ⚠️ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK CAPTCHA-gated) |
 | **ST** | Sachsen-Anhalt | ⚠️ Atom advertised but not locatable; UI caps at 5 tiles | ⚠️ same | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
-| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ✅ `download_alkis.sh sh` — statewide GeoJSON, ~243 MB | ⚠️ HU/HK only through the interactive download client |
+| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ⚠️ `download_alkis.sh sh` fetches the **Flur index** (~243 MB); the NAS is behind its `LINK_DATA` links | ⚠️ HU/HK only through the interactive download client |
 | **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
 | **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
@@ -89,11 +177,14 @@ footprint product.
 
 ## Fetching all four today
 
-There is no single command for it. `download_samples.sh` drives only the LiDAR side, because
-`download_alkis.sh` has no `BBOX` support — parcels and footprints are per-state or
-per-package until that lands. For one of the five states, the full set is:
+Whole-state, `download_all.sh` covers it — `ONLY=<id> ./download_all.sh all` fetches every
+dataset that state publishes. What has no single command is a *sample*: `download_samples.sh`
+drives only the LiDAR side, because `download_alkis.sh` has no `BBOX` support, so parcels and
+footprints stay per-state or per-package until that lands. For one of the five states:
 
 ```bash
+ONLY=<id> ./download_all.sh all                 # all four datasets, statewide volumes
+# or, one product at a time:
 ./download_<id>_lidar.sh both ./samples/<id>    # point cloud + terrain
 ./download_alkis.sh <id>                        # parcels + building footprints
 ```
@@ -218,7 +309,7 @@ HTTP with no credentials.
 | **SL** | Saarland | ✅ full (oE) | **anonymous** | public WebDAV share | NAS, Shape · Landkreis (7) | DL-DE/BY 2.0 |
 | **SN** | Sachsen | ✅ full (oE) | **anonymous** | single ZIP | NAS · statewide | DL-DE/BY 2.0 |
 | **ST** | Sachsen-Anhalt | ✅ vereinfacht (oE) | **anonymous** | WFS 2.0 only | GML · statewide (~2.7 M parcels) | DL-DE/BY 2.0 |
-| **SH** | Schleswig-Holstein | ✅ full (oE) | **anonymous** | single file | GeoJSON · statewide (~243 MB) | CC BY 4.0 |
+| **SH** | Schleswig-Holstein | ✅ full (oE), but two-step | **anonymous** | index file → per-Flur NAS | GeoJSON index (~243 MB) → `.xml.gz` per Flur | CC BY 4.0 |
 | **TH** | Thüringen | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | Shape, NAS · Flur (~16,500) | DL-DE/BY 2.0 |
 
 ## What each state gives you
@@ -240,7 +331,7 @@ What `download_alkis.sh` actually fetches, per state:
 | `rp` | Rheinland-Pfalz | `lika`, `hu` | 1 km tile (20,511) | ~31 GB |
 | `sl` | Saarland | `nas`, `shape` | Landkreis (7) | ~2.1 GB |
 | `sn` | Sachsen | `nas` | statewide | one ZIP |
-| `sh` | Schleswig-Holstein | `geojson` | statewide | ~243 MB |
+| `sh` | Schleswig-Holstein | `geojson` | statewide index | ~243 MB (index only) |
 | `th` | Thüringen | `shape`, `nas` | Flur (~16,500) | ~1.2 GB |
 | `st` | Sachsen-Anhalt | `flurstueck`, `gebaeude`, `nutzung` | WFS pages | ~2.7 M parcels |
 

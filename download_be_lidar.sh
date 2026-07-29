@@ -28,6 +28,9 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   BBOX="minE,minN,maxE,maxN"   # UTM33 kilometres, inclusive — dgm1 only
 #                                # (las packages are regions, not tiles, so BBOX can't cut them)
 #
@@ -54,7 +57,7 @@ command -v aria2c >/dev/null 2>&1 || {
 }
 
 fetch_one() {
-  local key="$1" url dir="$OUTROOT/$1"
+  local key="$1" url dir="${OUTDIR:-$OUTROOT/$1}"
   url="$(feed_url "$1")"
   echo "==> $key"
   echo "    feed: $url"

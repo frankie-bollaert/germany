@@ -36,6 +36,9 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   BBOX="minE,minN,maxE,maxN"   # UTM32 kilometres, subsets the las polygon sweep
 #
 set -euo pipefail
@@ -60,7 +63,7 @@ command -v aria2c >/dev/null 2>&1 || {
 
 # ---------------------------------------------------------------- dgm1: statewide metalink
 fetch_dgm1() {
-  local dir="$OUTROOT/dgm1"
+  local dir="${OUTDIR:-$OUTROOT/dgm1}"
   echo "==> dgm1"
   echo "    manifest: $DGM1_META4"
   mkdir -p "$dir"
@@ -102,7 +105,7 @@ PY
 
 # ---------------------------------------------------------------- las: polygon sweep
 fetch_las() {
-  local dir="$OUTROOT/las"
+  local dir="${OUTDIR:-$OUTROOT/las}"
   echo "==> las"
   echo "    service : $POLY2META  (2000 km²/request — swept in ${STEP}x${STEP} km polygons)"
   mkdir -p "$dir"

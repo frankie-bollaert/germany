@@ -47,6 +47,9 @@
 #
 # Env vars (override defaults):
 #   JOBS=8   CONN=4   DRY_RUN=1
+#   OUTDIR=<path>  write the files straight here, instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
+#                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   BBOX="minE,minN,maxE,maxN"   # UTM33 kilometres, inclusive
 #   VARIANT=_gtiff.tif           # dgm1 only — pick a different published variant,
 #                                # e.g. VARIANT=_xyz.zip or VARIANT=_schum_NW.tif
@@ -89,7 +92,7 @@ command -v aria2c >/dev/null 2>&1 || {
 }
 
 fetch_one() {
-  local key="$1" svc match suffix dir="$OUTROOT/$1"
+  local key="$1" svc match suffix dir="${OUTDIR:-$OUTROOT/$1}"
   svc="$(service_feed "$1")"
   match="$(dataset_match "$1")"
   suffix="$(variant_suffix "$1")"
