@@ -10,6 +10,7 @@ found, not because the data is gated.
 | **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 15 of 16 states |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
+| **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
 
 All LiDAR downloaders feed the same converter (`convert_to_cloud_optimized.sh`) and the same
 output tree. States are keyed by a two-letter **ID** throughout — see
@@ -247,6 +248,12 @@ cadastre openly; the three exceptions are content gaps at the source, not access
 - **Sachsen-Anhalt** — the LVermGeo open-data catalogue carries only ALKIS *derivatives*
   (digitale Verwaltungsgrenzen, Hausumringe, Hauskoordinaten). Parcels and cadastral
   attributes need a formal request.
+
+All three are closed by the **paid** nationwide product: RP and ST sit inside **FS-DE**
+(15 states, ~54 M parcels, *ab* €27,000 from the ZSHH), Bayern only in **FS-BY** (€56,000 from
+the LDBV). Neither has a download endpoint — FS-DE is delivered on a returnable USB drive — so
+this is a purchase order, not a missing script. Costs, contents, licences and the free test
+Shapefile: [`flurstuecke-commercial.md`](flurstuecke-commercial.md).
 
 Two portals do sit behind a login, but neither is the only route to their state's data:
 
