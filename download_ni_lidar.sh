@@ -51,7 +51,8 @@
 #   UTM km   anything larger. The API cannot filter on it, but every item name carries its
 #            UTM tile key (dgm1_32_601_5752_1_ni_2018 -> 601, 5752), so the filter is applied
 #            to that instead. Exact, and needs no coordinate transform — but it costs a walk
-#            of the whole catalogue (~94 pages) to find a handful of tiles.
+#            of the whole catalogue (~141 pages of 500 items, metadata only — no tile is
+#            fetched and discarded) to find a handful of tiles.
 #
 # Germany spans roughly 6-15 degrees east and 47-55 north, against UTM eastings of 280-900 km
 # and northings of 5,230-6,100 km, so the two ranges cannot be confused.
