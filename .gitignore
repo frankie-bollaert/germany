@@ -12,3 +12,10 @@ lidar/
 *.duckdb
 *.duckdb.wal
 *.duckdb.tmp/
+export/
+
+# macOS / IDE / agent-local state
+.DS_Store
+.idea/
+.claude/worktrees/
+.claude/settings.local.json
