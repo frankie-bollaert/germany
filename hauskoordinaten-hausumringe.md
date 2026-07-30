@@ -46,6 +46,31 @@ Docs (public, no login):
 - <https://sg.geodatenzentrum.de/web_public/gdz/dokumentation/deu/hu-de.pdf>
 - <https://sg.geodatenzentrum.de/web_public/gdz/dokumentation/deu/hk-de.pdf>
 
+## The same office sells parcels — and those are **not** €0.00
+
+Don't read the HK-DE/HU-DE fee across to the ZSHH's parcel product. **FS-DE** (*Amtliche
+Flurstücksinformationen Deutschland*) comes from the same office under the same AdV model, but
+it is a priced product:
+
+| | HU-DE / HK-DE | **FS-DE** |
+|---|---|---|
+| Fee | **€0.00**, licence-gated (V GeoBund / V GeoLänder) | **ab €27.000** — 15 states, no Bayern |
+| Bayern | included | sold separately as **FS-BY**, **€56.000** (LDBV) |
+| Delivery | gdz.bkg.bund.de account → download link, 5–10 days | **physical media**, posted |
+| BKG channel | orderable if eligible | listed, but federal/V-GeoBund only; everyone else → ZSHH |
+
+So ~**€83.000** for all 16 states, on AdV-GR + AGNB terms rather than any open licence. The
+€0.00 on the HK/HU pages is a *licence gate*, not a price list that extends across the ZSHH
+catalogue.
+
+Two things that do stay free: an `FS-DE-2026` **test Shapefile** (~1.7 MB) on the ZSHH page,
+and the BKG channel for anyone actually authorised under V GeoBund — the same eligibility rule
+as HK-DE/HU-DE above.
+
+Full breakdown, including what the fee buys over the open per-state route and the cheaper
+area-of-interest alternative for RP:
+[`flurstuecke-commercial.md`](flurstuecke-commercial.md).
+
 ---
 
 # 2. Open-data equivalents, per Bundesland
@@ -301,6 +326,9 @@ endpoint exists (`https://geoportal.thueringen.de/gaialight-th/_apps/dladownload
 - BKG open-data tree: <https://daten.gdz.bkg.bund.de/produkte/> · INSPIRE Atom: <https://sg.geodatenzentrum.de/web_download/>
 - ZSHH / AdV product sheets: <https://www.adv-online.de/AdV-Produkte/Standards-und-Produktblaetter/ZSHH/>
 - HU-DE metadata record: <https://gdk.gdi-de.org/geonetwork/srv/api/records/1B659395-6014-4B90-9B48-ACCDECF27518>
+- ZSHH overview: <https://www.ldbv.bayern.de/vermessung/zshh/>
+- FS-DE (priced parcels, same office): <https://www.ldbv.bayern.de/vermessung/zshh/fs-de.html> · order `zshh@ldbv.bayern.de`
+- FS-DE via BKG: <https://gdz.bkg.bund.de/index.php/default/flurstuecksinformationen-deutschland-fs-de.html>
 
 **States**
 - BW: <https://opengeodata.lgl-bw.de> · <https://www.lgl-bw.de/Produkte/Liegenschaftskataster/Hausumringe/index.html>
