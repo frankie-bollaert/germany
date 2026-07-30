@@ -13,8 +13,8 @@ found, not because the data is gated.
 | **ALKIS → DuckDB tables** | `alkis_to_duckdb.sh` | [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) |
 | **DuckDB → GeoParquet** | `duckdb_to_geoparquet.sh` | [Exporting to GeoParquet](#exporting-to-geoparquet) |
 | **LiDAR, sample squares only** | `download_samples.sh` | [A 5×5 km square per state](#lidar-for-the-sample-squares-only) |
-| **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md) |
-| **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`flurstuecke-commercial.md`](flurstuecke-commercial.md) |
+| **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`cadastre-products.md`](cadastre-products.md) |
+| **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`cadastre-products.md`](cadastre-products.md) |
 
 All LiDAR downloaders feed the same converter (`convert_to_cloud_optimized.sh`) and the same
 output tree. States are keyed by a two-letter **ID** throughout — see
@@ -310,7 +310,7 @@ URLs are all that reach aria2c.
 Sections 2 and 3 each answer one dataset at a time. This one answers the crossing question:
 **for which states can we fetch point cloud *and* terrain *and* parcels *and* building
 footprints?** Footprint sources are detailed in
-[`hauskoordinaten-hausumringe.md`](hauskoordinaten-hausumringe.md).
+[`cadastre-products.md`](cadastre-products.md#3-open-data-equivalents-per-bundesland).
 
 **Five states: BB, BE, MV, NW, SN.**
 
@@ -548,7 +548,7 @@ endpoint — FS-DE arrives on a returnable USB drive. For **RP** there is a much
 route: the CISS-Shop sells RP vector ALKIS for a drawn polygon at official state fees, as
 DXF/Shape/NAS. Costs, licences, the free FS-DE test Shapefile and the wider commercial market
 (geomer, infas 360, Nexiga, CISS TDI, per-object retail):
-[`flurstuecke-commercial.md`](flurstuecke-commercial.md).
+[`cadastre-products.md`](cadastre-products.md).
 
 **Sachsen-Anhalt used to be listed here as a third gap.** It is not one: LVermGeo publishes
 `ST_LVermGeo_ALKIS_WFS_OpenData`, an anonymous WFS 2.0 carrying `ave:Flurstueck` (~2.7 M),
