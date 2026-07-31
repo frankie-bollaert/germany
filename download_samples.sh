@@ -13,7 +13,10 @@
 #   · Not every downloader honours BBOX, and the ones that don't fail SILENTLY -- they accept
 #     the square and plan the whole state. download_rlp_lidar.sh ignores it outright
 #     (32.8 GB of dgm1, 5.18 TB of las), and two others ignore it for one dataset only:
-#     by/dgm1 (216.9 GB) and be/las. All are detected and refused, not skipped quietly.
+#     by/dgm1 (216.9 GB) and be/las (232.3 GB). All are detected and refused, not skipped
+#     quietly. be/las is the one that has a way out: Berlin's smallest published unit is a
+#     city region, and the smallest region is sample-sized, so BE is cut by BE_LAS_REGIONS
+#     instead of by the square. See the note above cuttable().
 #   · A square can also land in a hole in a state's coverage. That plans zero tiles and
 #     reports success, which is indistinguishable from a finished download until you look
 #     in the directory. Every combination is checked and the empty ones are listed at the
@@ -55,6 +58,8 @@
 #   ALLOW_UNCUT=1    run the combinations that ignore BBOX anyway — this downloads whole
 #                    states, hundreds of GB. Only meaningful with DRY_RUN=1 to see the size.
 #   LAS_KM=3         width in km of the centred point-cloud core (default 3; see above)
+#   BE_LAS_REGIONS   Berlin city regions to take for be/las (default Nordost, 0.9 GB).
+#                    Empty refuses be/las again, as it was before regions were selectable.
 #   SQUARES=path     square definitions (default ./sample_squares.tsv)
 #   JOBS=8 CONN=4    passed through to the downloaders
 #
@@ -93,13 +98,23 @@ offers() { grep -qE "^# Usage.*\[.*\b$2\b.*\]" "$1"; }
 #   by/dgm1  BBOX is wired only into the las polygon sweep; dgm1 comes from a statewide
 #            Metalink and ignores it -> 71,979 tiles, 216.9 GB
 #   be/las   the point cloud ships as whole city regions rather than tiles; the script says
-#            "BBOX ignored" and hands back all 9 region packages
+#            "BBOX ignored" and hands back all 9 region packages, 232.3 GB
 #
 # Refused by default because the whole point of this driver is that a sample stays a sample.
-bbox_honoured() {
+#
+# be/las has a second knob, though. A region is the smallest unit Berlin publishes, and one of
+# the nine is small enough to be a sample on its own: Nordost, 0.9 GB against 232.3 GB for the
+# city. So BE takes a region instead of a square, and lands within a factor of two of what the
+# square-cut states produce. Set BE_LAS_REGIONS="" to go back to refusing it outright.
+# Unset means Nordost; explicitly empty means refuse. Hence ${x-y}, not ${x:-y} — the
+# latter would collapse the two and make BE_LAS_REGIONS="" silently mean "Nordost".
+BE_LAS_REGIONS="${BE_LAS_REGIONS-Nordost}"
+
+cuttable() {
   case "$1/$2" in
-    by/dgm1|be/las) return 1 ;;
-    *)              return 0 ;;
+    be/las)  [[ -n "$BE_LAS_REGIONS" ]] ;;   # cut by region, not by square
+    by/dgm1) return 1 ;;
+    *)       return 0 ;;
   esac
 }
 
@@ -112,11 +127,15 @@ wanted() {
 
 run_one() {
   local key="$1" place="$2" ds="$3" bbox="$4" script="$5"
+  # Berlin's point cloud is selected by region rather than by square; every other
+  # state/dataset pair leaves REGIONS empty and is cut by BBOX alone.
+  local regions=""
+  [[ "$key/$ds" == "be/las" ]] && regions="$BE_LAS_REGIONS"
   echo
-  echo "==> $key  $ds  ($place)  BBOX=$bbox"
+  echo "==> $key  $ds  ($place)  ${bbox:+BBOX=$bbox}${regions:+REGIONS=$regions}"
   mkdir -p "$OUTROOT/$key"
   local log="$OUTROOT/$key/.$ds.plan"
-  if ! DRY_RUN="$DRY_RUN" BBOX="$bbox" ./"$script" "$ds" "$OUTROOT/$key" 2>&1 | tee "$log"; then
+  if ! DRY_RUN="$DRY_RUN" BBOX="$bbox" REGIONS="$regions" ./"$script" "$ds" "$OUTROOT/$key" 2>&1 | tee "$log"; then
     echo "    FAILED: $script $ds" >&2
     rm -f "$log"
     return 1
@@ -125,7 +144,7 @@ run_one() {
   # is the failure mode this script exists to prevent, so name it instead of letting an
   # empty directory look like a finished download. Not hypothetical: bb/las at Luebbenau
   # yields nothing at LAS_KM=3, and 5 tiles across the full 5 km square.
-  if grep -qE '(tiles|files): 0( |$)' "$log"; then
+  if grep -qE '(tiles|files|packages): 0( |$)' "$log"; then
     ZERO+=("$key  $ds — planned 0 tiles: this square sits in a gap in the state's coverage")
   fi
   rm -f "$log"
@@ -157,7 +176,7 @@ while IFS=$'\t' read -r key epsg bbox place why; do
       NOTES+=("$key  $place — no $ds published")
       no_product=$((no_product + 1)); continue
     fi
-    if ! bbox_honoured "$key" "$ds" && [[ "${ALLOW_UNCUT:-0}" != "1" ]]; then
+    if ! cuttable "$key" "$ds" && [[ "${ALLOW_UNCUT:-0}" != "1" ]]; then
       NOTES+=("$key  $place — $script ignores BBOX for $ds; refusing (whole state). ALLOW_UNCUT=1 to force")
       no_bbox=$((no_bbox + 1)); continue
     fi
@@ -169,6 +188,9 @@ while IFS=$'\t' read -r key epsg bbox place why; do
       # inclusive tile range -> a true 5x5 km
       tb="$mine,$minn,$((maxe - 1)),$((maxn - 1))"
     fi
+    # Berlin's las takes a region instead. Passing the square as well would only make the
+    # downloader print a note saying it ignored it.
+    [[ "$key/$ds" == "be/las" ]] && tb=""
     if run_one "$key" "$place" "$ds" "$tb" "$script"; then
       ok=$((ok + 1))
     else

@@ -431,7 +431,7 @@ What a `both` run actually plans, verified live 2026-07-29:
 | MV Sassnitz | 6 tiles | 9 tiles | dgm1 on a 2 km grid, las on 1 km |
 | SN Bad Schandau | 4 tiles | 4 tiles | 2 km packaging both products |
 | BW Heidelberg | 4 tiles | — | no open point cloud |
-| BE Berlin-Mitte | 9 tiles | refused | las ships as 9 city-region ZIPs, not tiles |
+| BE Berlin-Mitte | 9 tiles | 1 region (0.9 GB) | las ships as city-region ZIPs, not tiles — cut by region, not by square |
 | BY Garmisch | refused | 4 tiles | dgm1 is one statewide Metalink, uncuttable |
 | RP St. Goarshausen | refused | refused | no `BBOX` support at all |
 
@@ -440,6 +440,25 @@ reason. **Refusals are the point**: a downloader that ignores `BBOX` accepts the
 plans the whole state, so RP alone would pull 32.8 GB of terrain and 5.18 TB of point cloud
 under the guise of a sample. Each is detected and refused rather than skipped quietly;
 `ALLOW_UNCUT=1` forces them, which is only useful with `DRY_RUN=1` to see the size.
+
+Berlin's point cloud is the one refusal with a way out. It has no tile grid at all — the city
+ships as nine region ZIPs, 232.3 GB together, and a region is the smallest unit on offer. But
+the regions are wildly uneven, and the smallest is sample-sized: **Nordost, 0.9 GB** (11 las
+tiles, 2.4 GB unzipped) against 47.7 GB for Suedost. So BE is cut by region rather than by
+square, and lands in the same range as the square-cut states:
+
+```bash
+./download_samples.sh las                              # BE gets Nordost, 0.9 GB
+BE_LAS_REGIONS="Nordost Ost" ./download_samples.sh las # 15.6 GB
+BE_LAS_REGIONS="" ./download_samples.sh las            # refuse BE again, as before
+REGIONS=Mitte ./download_be_lidar.sh las               # or straight from the downloader
+```
+
+The catch, worth knowing before you compare the two BE samples: Nordost is Buch/Karow on the
+city's northeast edge, ~25 km from the Berlin-Mitte square the `dgm1` sample uses. They do not
+overlap. Co-locating them means `REGIONS=Mitte`, which is 34.2 GB. A region name the feed does
+not offer is a hard error listing the nine valid ones — not an empty download that reports
+success.
 
 Two units meet here. Every downloader takes `BBOX` as **UTM kilometres, inclusive of both
 corners** — so the TSV's true 5 km extent (`371..376`) has 1 subtracted from each maximum,
@@ -573,7 +592,7 @@ between them, well over 10 TB of point cloud.
 | ID | State | `las` (point cloud) | `dgm1` (terrain) |
 |----|-------|---------------------|------------------|
 | **BY** | Bayern | ~69,546 tiles (1 km), multi-TB | 71,979 tiles, 217 GB |
-| **BE** | Berlin | 9 region packages | 297 tiles (2 km), ~0.2 GB |
+| **BE** | Berlin | 9 region packages, 232.3 GB | 297 tiles (2 km), ~0.2 GB |
 | **BB** | Brandenburg | 13,086 tiles (1 km), ~1.35 TB | 31,291 tiles (1 km), ~36 GB |
 | **MV** | Mecklenburg-Vorpommern | 25,466 tiles (1 km) | 6,407 tiles (2 km) |
 | **NI** | Niedersachsen | ❌ none published | 49,708 tiles (1 km), **already COG** |

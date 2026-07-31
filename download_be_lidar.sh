@@ -10,8 +10,15 @@
 #
 # Datasets (verified live):
 #   las  — Airborne Laserscanning (ALS), primary 3D laser scan data
-#          packaged as 9 city-region ZIPs (Mitte, Nord, Nordost, Nordwest, Ost, Sued, …)
-#          rather than a tile grid — you get whole regions or nothing
+#          packaged as 9 city-region ZIPs rather than a tile grid, so a region is the
+#          smallest thing that can be asked for — BBOX cannot cut it, REGIONS picks
+#          whole ones. Measured 2026-07-30, 232.3 GB for the city:
+#            Suedost 47.7   Sued 35.6   Mitte 34.2   Nord 29.8   Suedwest 29.3
+#            West 25.1      Nordwest 15.0   Ost 14.7   Nordost 0.9
+#          Nordost is the outlier that makes a usable sample: 0.9 GB zipped, 11 las
+#          tiles on the 1 km grid (E 400-403, N 5826-5834 — Buch/Karow, the city's
+#          northeast edge), 2.4 GB unzipped. Note it is ~25 km from the Berlin-Mitte
+#          sample square, so the las and dgm1 samples do not overlap.
 #   dgm1 — ATKIS DGM, 1 m grid, 2 km x 2 km tiles named DGM1_<E_km>_<N_km>.zip
 #          297 tiles, ~0.7 MB each => roughly 0.2 GB for the whole city
 #
@@ -23,7 +30,8 @@
 #
 # Usage   : ./download_be_lidar.sh [dgm1|las|both] [output_dir]
 #   ./download_be_lidar.sh dgm1                 # ~0.2 GB into ./be_lidar/dgm1
-#   ./download_be_lidar.sh las
+#   ./download_be_lidar.sh las                  # all 9 regions — 232 GB
+#   REGIONS=Nordost ./download_be_lidar.sh las  # one region — 0.9 GB
 #   ./download_be_lidar.sh both
 #
 # Env vars (override defaults):
@@ -33,6 +41,9 @@
 #                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #   BBOX="minE,minN,maxE,maxN"   # UTM33 kilometres, inclusive — dgm1 only
 #                                # (las packages are regions, not tiles, so BBOX can't cut them)
+#   REGIONS="Nordost Ost"        # las only — city regions to fetch, space- or comma-separated.
+#                                # Unset means all nine. A name the feed does not offer is an
+#                                # error, not an empty download.
 #
 set -euo pipefail
 
@@ -67,32 +78,55 @@ fetch_one() {
   curl -fsS "$url" -o "$feed"
 
   local input="$dir/.aria2.input"
-  python3 - "$feed" "$input" "$key" "${BBOX:-}" <<'PY'
+  python3 - "$feed" "$input" "$key" "${BBOX:-}" "${REGIONS:-}" <<'PY'
 import sys, re, html
 
-feed, out, key, bbox = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+feed, out, key, bbox, regions = sys.argv[1:6]
 s = open(feed, encoding="utf-8", errors="replace").read()
 
 box = None
 if bbox:
     if key != "dgm1":
-        print("    note: BBOX ignored — las is packaged as whole city regions, not tiles")
+        print("    note: BBOX ignored — las is packaged as whole city regions, not tiles;"
+              " pick them with REGIONS")
     else:
         mine, minn, maxe, maxn = (int(v) for v in bbox.split(","))
         box = (mine, minn, maxe, maxn)
+
+want = None
+if regions:
+    if key != "las":
+        print("    note: REGIONS ignored — dgm1 is a tile grid; cut it with BBOX")
+    else:
+        want = set(regions.replace(",", " ").split())
+
+# The feed links some enclosures more than once, so collect before filtering: the region
+# names have to be known in full to tell a typo from a region that simply was not asked for.
+entries, seen = [], set()
+for href in re.findall(r'href="([^"]+\.zip)"', s):
+    href = html.unescape(href)
+    name = href.rsplit("/", 1)[-1]
+    if name not in seen:
+        seen.add(name)
+        entries.append((name, href))
+
+# A misspelt region would otherwise select nothing and still report success, which reads
+# exactly like a finished download. Refuse, and say what the feed actually offers.
+if want is not None:
+    have = {n[:-4] for n, _ in entries}
+    unknown = sorted(want - have)
+    if unknown:
+        sys.exit("    ERROR: no such region: %s\n    feed offers: %s"
+                 % (", ".join(unknown), ", ".join(sorted(have))))
 
 # DGM1 tiles carry their SW corner in the filename: DGM1_368_5808.zip
 tile_re = re.compile(r'DGM1_(\d+)_(\d+)\.zip$')
 
 n = 0
-seen = set()
 with open(out, "w", encoding="utf-8") as fh:
-    for href in re.findall(r'href="([^"]+\.zip)"', s):
-        href = html.unescape(href)
-        name = href.rsplit("/", 1)[-1]
-        if name in seen:
+    for name, href in entries:
+        if want is not None and name[:-4] not in want:
             continue
-        seen.add(name)
         if box:
             m = tile_re.search(name)
             if not m:
