@@ -138,17 +138,145 @@ JOBS=8 ./alkis_to_duckdb.sh /mnt/big/germany.duckdb
 
 | Table | One row per | Filled from |
 |-------|-------------|-------------|
-| `plots` | Flurstück | BE, BW, NW |
-| `structures` | building footprint identity | BE, BW, BY, NW |
-| `structure_versions` | footprint geometry, `→ structures.id` | the same four |
+| `plots` | Flurstück | BB, BE, BW, MV, NW, SN |
+| `structures` | building footprint identity | BB, BE, BW, BY, MV, NW, SN |
+| `structure_versions` | footprint geometry, `→ structures.id` | the same seven |
 
-Four of the sixteen states are wired up, because those are the four whose ALKIS is both
-downloaded here and carries vector parcels or footprints: `be-flurstuecke` / `be-gebaeude`
-(paged GML), `bw-shape` (zipped Shapefile per Gemarkung), `by-hausumringe` (zipped Shapefile
-per Bezirk) and `nw` (GeoPackage per Kreis). Deliberately not loaded: `bw-nas` (the same
-content as `bw-shape`, but NAS needs a GFS schema mapping), `by-tn` (land use — neither
-parcels nor footprints) and `st` (never fetched). Bayern contributes **no plots at all**,
-which is the content gap described in [The two content gaps](#the-two-content-gaps).
+Seven of the sixteen states are wired up: `bb-shape` (zipped Shapefile per Landkreis, see
+below), `be-flurstuecke` / `be-gebaeude` (paged GML), `bw-shape` (zipped Shapefile per
+Gemarkung), `by-hausumringe` (zipped Shapefile per Bezirk), `mv-nas` (zipped Shapefile per
+Gemeinde, see below), `nw` (GeoPackage per Kreis) and `sn` (statewide NAS, see below).
+Deliberately not loaded: `bb-nas` and `bw-nas` (the same content as their `-shape` siblings,
+already loaded from the easier format), `by-tn` (land use — neither parcels nor footprints)
+and `st` (never fetched). Bayern contributes **no plots at all**, which is the content gap
+described in [The two content gaps](#the-two-content-gaps). The remaining eight states
+(`hb`, `he`, `hh`, `ni`, `rp`, `sh`, `sl`, `th`) are downloaded but have no `DATASETS` entry
+yet — the downloaders have run ahead of the loader.
+
+## Brandenburg: a third state on the *vereinfacht* profile
+
+BB publishes the whole state twice — `bb-nas` and `bb-shape`, one zip per Landkreis (18) in
+each. The Shapefile half is the **ALKIS *vereinfacht* profile**, the same one MV and NW ship,
+so it costs no new reader: the existing `zipshp` reader and the MV field lists carry over
+almost unchanged. The NAS half is redundant once it is loaded, exactly as in MV.
+
+The layers are `Flurstueck` and `GebauedeBauwerk` — note BB reproduces NW's misspelling of
+*Gebäude* — alongside `KatasterBezirk`, `Nutzung`, `NutzungFlurstueck` and
+`VerwaltungsEinheit`, none of which map to a table here.
+
+Three deltas against MV/NW, all small:
+
+- The land-use text is **`tntext`**, where MV and NW both call it `tntxt`. A one-character
+  difference, but `ogr2ogr -select` is fatal on a field the source lacks, so BB needs its own
+  entry in `fields_for` rather than reusing NW's.
+- There is an extra **`flurstnr`** — the parcel number as a single string, where
+  `flstnrzae`/`flstnrnen` are the split halves. It is carried into `metadata`.
+- **Brandenburg has no Regierungsbezirke.** `regbezirk` is null in every row and only the key
+  `regbezschl` (`120`) is set. Both are kept so the metadata shape matches MV and NW.
+
+`aktualit` is text with a trailing `Z` (`"2024-06-04Z"`), as in MV, so it needs the same
+`try_cast`. The CRS is **EPSG:25833** and the `.prj` declares it, so unlike the NAS sources BB
+needs no `srs_for` entry.
+
+Every text field is 254 bytes wide and values do sit at the cap, but no value in the state is
+cut mid-character — all 18 packages load without DuckDB's `Invalid string encoding` — so BB
+does **not** need [the truncated-UTF-8 repair](#the-truncated-utf-8-repair) that MV does.
+
+Loaded, the state gives **3,145,234 parcels** over 29,495 km² (Brandenburg is 29,654 km², so
+the parcel mosaic covers 99.5 % of it) and **2,478,799 footprints**. The counts read
+3,145,235 and 2,478,917 before dedup: 1 parcel and 118 buildings appear in two packages at
+once, every one of them on a Landkreis boundary, and the loader's `QUALIFY` keeps the first.
+No row is lost to empty or missing geometry.
+
+One operational note: the original `download_all.sh` run left BB half-fetched — 7 of the 18
+shape zips were truncated, with aria2 control files still beside them (`alkis bb shape
+(exit 1)` in `.download_all.failures`). Re-running the downloader resumes them in place:
+
+```bash
+OUTDIR=../germany-data/alkis/bb-shape ./download_alkis.sh bb shape
+```
+
+## Mecklenburg-Vorpommern: the same profile as NW, in a different box
+
+MV was nearly free, because **MV and NW publish the identical ALKIS *vereinfacht* profile**:
+the same 22 parcel attributes in the same order (`oid`, `aktualit`, `idflurst`, `flaeche`,
+`flstkennz`, …) and the same 10 building attributes. Only the container differs — MV ships
+zipped Shapefiles per Gemeinde where NW ships a GeoPackage per Kreis — so the existing
+`zipshp` reader handles it and the field lists carry straight over.
+
+Two things do need care:
+
+**MV publishes every Gemeinde twice**, as `<ags>_NAS_<name>.zip` *and* `<ags>_SHP_<name>.zip`,
+into one directory — 724 of each, 7.5 GB together. The dataset glob is therefore `*_SHP_*.zip`
+and not `*.zip`; with the looser glob the 724 NAS archives are picked up too and every one
+fails, because `/vsizip/<nas>.zip/Flurstueck.shp` does not exist. The NAS half is redundant
+once the Shapefile half is loaded, and nothing reads it.
+
+**`aktualit` is text here, not a date** — `"2024-04-22Z"` — where NW's GeoPackage gives a real
+`DATE`. It needs `try_cast`, which NW does not. DuckDB parses the trailing `Z` itself, so only
+the empty string has to be guarded.
+
+All 724 packages were checked to carry both `Flurstueck.shp` and `GebaeudeBauwerk.shp`, so
+there is no Gemeinde-shaped hole in either table.
+
+### The truncated-UTF-8 repair
+
+Every text attribute in MV's DBF is 254 bytes wide, and the publisher cuts long values to fit
+**without respecting character boundaries**. One parcel's land-use summary ends
+`…Forstwirtschaftsfl\xC3` — the lead byte of `ä` with its continuation byte gone. GDAL copies
+the bytes through without complaint, but DuckDB rejects the entire Parquet file with
+`Invalid string encoding`, so **one Gemeinde takes the whole state's load down**. Scanning all
+724 packages: 1 file, 1 column — enough to break everything.
+
+MV is therefore staged through `-dialect SQLITE -sql` rather than a plain `-select`, with
+
+```sql
+CASE WHEN length(CAST(f AS BLOB)) >= 254 THEN substr(f, 1, length(f) - 1) ELSE f END
+```
+
+applied to every 254-wide field. Only values *sitting at the cap* are touched — the only ones
+that can have been cut — and they lose one more character from a string the publisher had
+already truncated. Everything below the cap passes through byte-identical. It is applied to
+all capped fields rather than just the one known to be broken today, because it is the same
+defect with the same fix and there is no reason to guess which field breaks in the next
+release. The `BLOB` cast is why this needs the SQLITE dialect: OGR SQL has no way to measure
+a string in bytes.
+
+## Sachsen: the NAS reader
+
+Sachsen is the one state that ships a single statewide NAS *Bestandsdatenauszug* rather than
+per-region files, and it needed a fourth reader. Three things are specific to it, all
+measured on the 2026-07 export:
+
+**It is a zip inside a zip** — `alkis_sn.zip` → `E_<auftrag>.zip` → 1,596 XML parts, ~95 GB
+unzipped. Reading a part through nested `/vsizip` takes **88 s**; the same part as a plain
+file parses in **0.4 s**. A deflate member cannot seek backwards, so the GML driver's rewinds
+restart decompression from the top, twice over. The inner zip is therefore unwrapped once
+into staging (2.4 GB, cached) and each part is extracted to a temp file, converted, and
+deleted — peak extra disk is `JOBS × ~60 MB`, not 95 GB.
+
+**The parts are split by object type, disjointly.** `AX_Flurstueck` is in 569 parts,
+`AX_Gebaeude` in a *different* 508, and 519 parts hold neither. The archive is indexed once
+(`parts.index`, ~30 s) so each dataset converts only its own third instead of all 1,596 twice.
+
+**The parts do not share a schema.** `AX_Flurstueck` comes in 3 variants and `AX_Gebaeude` in
+8. `zeitpunktDerEntstehung` is missing from 25 of the 569 parcel parts and
+`gebaeudekennzeichen` from 103 of the 508 building parts — and `ogr2ogr -select` is *fatal* on
+a field the source lacks, so a naive field list dies partway through. One `.gfs` is generated
+from a part carrying the full field list and placed next to every extracted part; that pins a
+single schema for the dataset and turns a missing field into `NULL` instead of an aborted run.
+If no part satisfies the field list, the run stops and says so — that is how a changed export
+announces itself rather than silently dropping a column.
+
+Two smaller quirks: `srsName` is the AdV URN `urn:adv:crs:ETRS89_UTM33`, which GDAL does not
+resolve, so the layer reports no CRS at all and `-s_srs EPSG:25833` is supplied explicitly;
+and geometry is `CurvePolygon`, because ALKIS uses circular arcs, which `-nlt MULTIPOLYGON`
+linearises.
+
+Both downloaders' output locations are accepted — `./download_alkis.sh sn` writes `alkis/sn`
+while `download_all.sh` writes `alkis/sn-nas`. A dataset's source dir may now list
+alternatives as `sn|sn-nas`, and the first one with matching files wins; without that, SN
+would be silently skipped depending on which downloader had been used.
 
 ## Staging is what makes it resumable
 
@@ -166,13 +294,16 @@ touched in the last `SETTLE=60` seconds, are skipped rather than half-read. Re-r
 download finishes and only the new files are converted.
 
 `KEEP_STAGE=0` deletes each dataset's staging once it has loaded, at the cost of that
-resumability. Staging the full tree costs roughly 8 GB.
+resumability. Staging the full tree costs roughly 8 GB, plus 2.4 GB for Sachsen's unwrapped
+NAS archive, which lives under `.duckdb-stage/.nas/` and is what makes a second SN run skip
+straight to converting.
 
 ## What goes in which column
 
 `local_id` is the AAA object identifier **exactly as the state publishes it** — `oid` in NW
 and BW (a 16-character id plus a two-character object-type suffix, `FL` for Flurstück, `BL`
-for Bauwerk), `uuid` in BE. `local_id_region` and `region` are both the state ID, which makes
+for Bauwerk), `uuid` in BE, `identifier` in SN (the full AAA URN,
+`urn:adv:oid:DESNALK0Aa2000Wy`). `local_id_region` and `region` are both the state ID, which makes
 the pair unique nationwide. Bayern's Hausumringe carry no identifier of any kind, so one is
 synthesised from the source file stem and the feature id (`091_Oberbayern_Hausumringe:1722464`);
 it is stable for as long as the source file is.
@@ -182,11 +313,24 @@ key names (`flurstueckskennzeichen`, `gemarkungsschluessel`, `lagebezeichnung`, 
 `quelle` naming the product it came from.
 
 Two columns need a fallback. `area` uses the *amtliche Fläche* the cadastre states (`flaeche`,
-`afl`); where that is missing or zero it falls back to `ST_Area_Spheroid` of the geometry.
-`valid_from` uses the source's own date (`aktualit`, `beg`), but **Berlin's `gebaeude` layer
-and Bayern's Hausumringe carry no date at all** — those get a dataset-level snapshot date, the
-newest source file's mtime, which for a fresh download is when the state served it. Override
-with `FALLBACK_DATE=`.
+`afl`, `amtlicheFlaeche`); where that is missing or zero it falls back to `ST_Area_Spheroid`
+of the geometry. `valid_from` uses the source's own date (`aktualit`, `beg`), but **Berlin's
+`gebaeude` layer and Bayern's Hausumringe carry no date at all** — those get a dataset-level
+snapshot date, the newest source file's mtime, which for a fresh download is when the state
+served it. Override with `FALLBACK_DATE=`. Sachsen sits between the two: parcels prefer
+`zeitpunktDerEntstehung` (when the parcel came into existence) but it is null in about a
+quarter of rows, so they fall back to `beginnt` — when this object *version* became current —
+which is always present and is what buildings use directly.
+
+`structure_versions.type` is a plain German label everywhere, but Sachsen is the only source
+that ships it as a **numeric AdV code** rather than resolved text, so the loader translates
+it. All 2,539,965 buildings in the export were scanned rather than sampled: 59 distinct codes
+occur, and each is mapped from the
+[AdV code list](https://repository.gdi-de.org/schemas/adv/citygml/Codelisten/BuildingFunctionTypeAdV.xml)
+— `1000` → *Wohngebäude* (57% of them), `2000` → *Gebäude für Wirtschaft oder Gewerbe*,
+`2463` → *Garage*, and so on. A code outside that set keeps its number
+(`Gebäudefunktion 1234`) instead of collapsing into a generic bucket, so a future export's
+new codes show up in a `GROUP BY` rather than hiding.
 
 ## The DuckDB translation of the PostGIS schema
 
@@ -204,8 +348,11 @@ with `FALLBACK_DATE=`.
 
 An `ingest_log` table records rows read, rows kept and multi-part count per dataset, and the
 run prints it at the end. Rows are dropped only for a null or empty geometry, or for a
-duplicate `local_id` within the same dataset — 1,285 of BW's 6.53 M footprints, nothing
-anywhere else.
+duplicate `local_id` within the same dataset: 1,285 of BW's 6.53 M footprints, and in MV 38
+parcels plus 440 footprints — all duplicate `oid`s, none an empty geometry. MV's are a
+side-effect of per-Gemeinde packaging: an object on a municipal boundary is published in both
+neighbouring packages, so the dedup is doing exactly what it exists for. BE, BY, NW and SN
+drop nothing.
 
 Geometry is passed through as the cadastre drew it, not repaired: 68 of 13.6 M parcels fail
 `ST_IsValid` (self-intersections in the source). Run them through `ST_MakeValid` if your
