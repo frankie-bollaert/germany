@@ -11,6 +11,23 @@ Common types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`,
 `ci`, `build`. Breaking changes use `!` before the colon or a
 `BREAKING CHANGE:` footer.
 
+## Where the data lives
+
+The downloaded data is **not** in this repo any more — it was moved to a sibling directory,
+`../germany-data/`, which now holds `alkis/`, `samples/`, the `*_lidar/` trees, `geoparquet/`
+and the `cadaster-<state>.duckdb` outputs.
+
+Every script still defaults to a path inside the repo, so the location has to be passed in:
+
+```bash
+ALKIS_DIR=../germany-data/alkis ./alkis_to_duckdb.sh ../germany-data/cadaster-sn.duckdb
+./download_samples.sh both ../germany-data/samples
+```
+
+`alkis_to_duckdb.sh` errors out when `ALKIS_DIR` does not exist rather than reporting an
+empty plan, so a forgotten override fails immediately instead of looking like "nothing to
+load". The staging cache lives under `$ALKIS_DIR/.duckdb-stage`, so it moved with the data.
+
 The end goal is to populate the following tables from the alkis data. The tables go in a duckdb database.
 
 Plots
