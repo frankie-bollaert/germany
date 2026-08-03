@@ -51,6 +51,11 @@
 #           rather than hard-coded, and the ZIP list comes from a PROPFIND rather than a
 #           baked-in filename list — so a re-share or a 2026 campaign shows up on its own.
 #
+#           A tile that fails is retried up to three times with backoff: the share sits behind
+#           a proxy that returns the occasional 502 under load (one tile in 310 on the first
+#           full district run). Whatever still fails is listed at the end, and re-running
+#           fetches only those — completed tiles are skipped on size.
+#
 #           No checksums are published — sizes are checked against the ZIP directory, not
 #           hash-verified.
 #
@@ -104,7 +109,7 @@ echo "    districts : $KREISE"
 echo "    out       : $DIR"
 
 KREISE="$KREISE" BBOX="${BBOX:-}" JOBS="$JOBS" DRY_RUN="$DRY_RUN" python3 - "$DIR" <<'PY'
-import os, re, struct, sys, threading, urllib.error, urllib.parse, urllib.request, zlib
+import os, re, struct, sys, threading, time, urllib.error, urllib.parse, urllib.request, zlib
 from queue import Queue
 
 OUT    = sys.argv[1]
@@ -290,7 +295,25 @@ if DRY:
     print("    DRY_RUN=1 — skipping download.")
     raise SystemExit(0)
 
-def fetch(url, base, lho, method, csz, usz):
+def fetch(url, base, lho, method, csz, usz, attempts=4):
+    """One tile, with a bounded retry.
+
+    The share sits behind a proxy that returns the occasional 502 under load — one tile in
+    310 on the first full district run. Without a retry that tile is simply lost and the run
+    exits 1, which turns a two-second hiccup into "re-run the whole thing". Backoff is
+    2/4/8 s; anything still failing after that is reported and the other tiles carry on.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            return _fetch(url, base, lho, method, csz, usz)
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            with lock:
+                print(f"      ~ {base}: {exc} — retry {attempt}/{attempts - 1}", flush=True)
+            time.sleep(2 ** attempt)
+
+def _fetch(url, base, lho, method, csz, usz):
     dest = os.path.join(OUT, base)
     if os.path.exists(dest) and os.path.getsize(dest) == usz:
         return f"      = {base} (already complete)"
