@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Draw this repo's per-state coverage as maps. Three of them, same geometry, same three tiers.
+"""Draw this repo's per-state coverage as maps. Three of them, same geometry, same tiers.
 
 One per section of README.md, which answers the same questions in prose and tables; these put
 the answers on geometry, so a glance replaces a table read.
 
   coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
-            green  all four are scriptable today                                        (5)
-            orange elevation works, but one of the four is missing at the source         (4)
-            red    no bulk LiDAR endpoint at all -- these states are cadastre-only       (7)
+            green    all four are scriptable today                                       (7)
+            orange   elevation works, but one of the four is missing at the source        (2)
+            red      no bulk LiDAR endpoint -- open, but portal only                      (5)
+            darkred  no point cloud published at all -- terrain only                      (2)
 
   lidar     what elevation can a script actually fetch in bulk?
             green  point cloud + terrain                                                 (7)
@@ -19,10 +20,12 @@ the answers on geometry, so a glance replaces a table read.
             orange raster cadastral map only -- a picture of the parcels, not geometry   (2)
             red    not open data                                                         (0)
 
-Colour is per-map, not per-tier, because "worst" is a different question on each. The lidar
-map inverts the other two: red is the state with no point cloud to fetch, orange the one
-behind a portal, since a portal state still has every product -- just not scriptably -- while
-a state that publishes no point cloud has nothing more to give however you ask.
+Colour is per-map, not per-tier, because "worst" is a different question on each. Coverage is
+the only map with four tiers: it splits red so that a state we merely cannot reach in bulk is
+not painted the same as one with nothing left to reach for. The lidar map draws the same
+distinction with the colours it has, which is why its red and orange read as inverted next to
+the alkis map -- a portal state still has every product, just not scriptably, while BW and NI
+publish no point cloud however you ask, and that is the deeper red on the coverage map.
 
 Red never means "closed" except on the alkis map. All 16 states publish elevation openly, and
 orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
@@ -87,9 +90,12 @@ HOUSES = {
 # (stroke, fill). Which tier gets which colour is a per-map decision -- see each map's legend
 # in MAPS below -- because "worst" is not the same question on every map.
 PALETTE = {
-    "green":  ("#2e7d32", "#a5d6a7"),
-    "orange": ("#e65100", "#ffcc80"),
-    "red":    ("#b71c1c", "#ef9a9a"),
+    "green":   ("#2e7d32", "#a5d6a7"),
+    "orange":  ("#e65100", "#ffcc80"),
+    "red":     ("#b71c1c", "#ef9a9a"),
+    # A second, deeper red so the coverage map can separate "we cannot reach it" from "it was
+    # never published". Only that map uses four tiers; the other two stay on three.
+    "darkred": ("#7f0000", "#e57373"),
 }
 
 # Labels that do not fit inside their own polygon: (dx, dy) in output px from the centroid,
@@ -106,7 +112,9 @@ OFFSET_LABELS = {
 NUDGE = {"bb": (20, 82)}
 
 W, H, PAD = 620, 800, 14
-LEGEND_H = 118
+# Heading + footnote + 20px per legend row. Three-row maps keep their historic 118, so only
+# the coverage map's fourth tier eats into the drawing area.
+LEGEND_BASE, LEGEND_ROW = 58, 20
 
 # Both maps label states with the repo-wide ID, so both say so. See "The state ID" in
 # README.md -- the ID is the ISO 3166-2 code minus the DE- prefix, and the same string
@@ -119,7 +127,13 @@ def classify_coverage(props, key):
 
     lidar_dgm1/lidar_las say the state *publishes* the product; lidar_script says this repo
     can actually fetch it in bulk. The map is about what we can fetch, so both are required --
-    that gap is the whole reason seven states are red while publishing elevation openly.
+    that gap is why five states fall to a red tier while publishing elevation openly.
+
+    The two red tiers are different kinds of gap, ordered the same way the lidar map orders
+    them. 'none' is a delivery problem: the products exist, a portal just will not hand them
+    over in bulk, so the day an endpoint appears the state moves up. 'nolas' is a source
+    problem: BW and NI publish no point cloud at all, so there is nothing further to fetch
+    however the request is made. That makes it the worse of the two, hence the deeper red.
     """
     scripted = bool(props.get("lidar_script"))
     have = {
@@ -134,9 +148,12 @@ def classify_coverage(props, key):
         detail += f" (missing: {', '.join(missing)})"
     if not missing:
         return "full", detail
-    # No elevation at all is a different kind of gap from missing one product.
-    if not have["point cloud"] and not have["terrain"]:
+    # Order matters: an unscripted state has no point cloud either, and its gap is the milder
+    # of the two, so the no-endpoint test has to come first.
+    if not scripted:
         return "none", detail
+    if not have["point cloud"]:
+        return "nolas", detail
     return "partial", detail
 
 
@@ -194,7 +211,8 @@ MAPS = {
         heading="Point cloud + terrain + plots + house structures",
         legend=[("full", "green", "all four datasets"),
                 ("partial", "orange", "missing one of the four"),
-                ("none", "red", "no bulk LiDAR - cadastre only")],
+                ("none", "red", "no bulk LiDAR endpoint — portal only"),
+                ("nolas", "darkred", "no point cloud published — terrain only")],
     ),
     "lidar": dict(
         out="lidar_map.svg",
@@ -292,14 +310,16 @@ def main():
     kx = math.cos(math.radians((min(lats) + max(lats)) / 2))
     x0, x1 = min(lons) * kx, max(lons) * kx
     y0, y1 = min(lats), max(lats)
-    scale = min((W - 2 * PAD) / (x1 - x0), (H - LEGEND_H - 2 * PAD) / (y1 - y0))
+    legend_h = LEGEND_BASE + LEGEND_ROW * len(spec["legend"])
+    scale = min((W - 2 * PAD) / (x1 - x0), (H - legend_h - 2 * PAD) / (y1 - y0))
     ox = PAD + ((W - 2 * PAD) - (x1 - x0) * scale) / 2
 
     def project(lon, lat):
         return (ox + (lon * kx - x0) * scale, PAD + (y1 - lat) * scale)
 
     colour = {tier: PALETTE[name] for tier, name, _ in spec["legend"]}
-    drawn, labels, counts = [], [], {"full": 0, "partial": 0, "none": 0}
+    drawn, labels = [], []
+    counts = {tier: 0 for tier, _, _ in spec["legend"]}
     for f in feats:
         p = f["properties"]
         key = p["key"]
@@ -346,16 +366,16 @@ def main():
     # Largest first, so the enclosed city-states stay visible.
     body = [svg for _, svg in sorted(drawn, key=lambda d: -d[0])]
 
-    ly = H - LEGEND_H + 30
+    ly = H - legend_h + 30
     leg = [f'  <text x="{PAD}" y="{ly - 14}" class="h">{spec["heading"]}</text>']
     for i, (tier, name, text) in enumerate(spec["legend"]):
         text = f"{text} ({counts[tier]})"
         stroke, fill = PALETTE[name]
-        y = ly + i * 20
+        y = ly + i * LEGEND_ROW
         leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
                    f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>')
         leg.append(f'  <text x="{PAD + 22}" y="{y}" class="l">{text}</text>')
-    leg.append(f'  <text x="{PAD}" y="{ly + len(spec["legend"]) * 20 + 2}" class="f">'
+    leg.append(f'  <text x="{PAD}" y="{ly + len(spec["legend"]) * LEGEND_ROW + 2}" class="f">'
                f'{FOOTNOTE}</text>')
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" \
@@ -375,7 +395,7 @@ viewBox="0 0 {W} {H}" font-family="Helvetica,Arial,sans-serif">
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(svg)
     print(f"{out}  {os.path.getsize(out) / 1024:.0f} KB  "
-          f"({counts['full']} full / {counts['partial']} partial / {counts['none']} none)")
+          f"({' / '.join(f'{counts[t]} {t}' for t, _, _ in spec['legend'])})")
 
     rasterize(os.path.abspath(out), os.path.splitext(os.path.abspath(out))[0] + ".png")
 

@@ -485,7 +485,7 @@ footprints?** Footprint sources are detailed in
 
 **Seven states: BB, BE, MV, NW, SN, TH, SL.**
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, ST) for no bulk LiDAR" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, HH, SH, ST) for no bulk LiDAR endpoint, dark red (BW, NI) for no point cloud published" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
@@ -521,6 +521,14 @@ end to end (~0.2 GB of DGM1, 9 point-cloud packages, WFS cadastre) and also DL-D
 makes it the natural smoke test for a full four-dataset pipeline. **BB** carries one caveat:
 its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,291-tile DGM1
 grid, released campaign by campaign.
+
+The map carries **two shades of red**, because the two ways of ending up without elevation are
+not the same problem. Light red (HB, HE, HH, SH, ST) is a delivery gap: the products exist and
+are open, but no bulk endpoint hands them over, so these states move up the day one appears.
+Dark red (BW, NI) is a source gap — neither publishes a point cloud at all, so there is nothing
+further to fetch however the request is made, even though `download_bw_lidar.sh` and
+`download_ni_lidar.sh` pull their DGM1 without trouble. The LiDAR map below ranks them the same
+way, for the same reason.
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
 `bundeslaender.geojson`, so they follow the data rather than these tables. Regenerate all
