@@ -8,6 +8,10 @@ lidar/
 by_parzellarkarte/
 .download_all.failures
 
+# A sample run that landed in ./mv instead of ../germany-data — 6 GB of LiDAR.
+# Anchored, so a state directory named mv (alkis/mv, samples/mv) is unaffected.
+/mv/
+
 # Derived from that data by alkis_to_duckdb.sh — rebuildable, so never committed either.
 # (Its GeoParquet staging lives under alkis/.duckdb-stage/, already covered above.)
 *.duckdb
