@@ -19,7 +19,7 @@
 # straight into the path given — that is the only change it makes to their behaviour.
 #
 # States are keyed by the repo-wide two-letter ID (nw, rp), not by the legacy filenames
-# download_nrw_lidar.sh / download_rlp_lidar.sh — see README.md "Naming".
+# download_nrw_lidar.sh / download_rlp_lidar.sh — see README_download.md "Naming".
 #
 # Usage : ./download_all.sh [group] [root]
 #   ./download_all.sh alkis            # 29 ALKIS combinations   -> ./alkis/<state>-<dataset>

@@ -40,7 +40,7 @@
 #
 # No state requires a login for the data this script fetches. Two states are incomplete at
 # the source (by, rp) and one is incomplete here (sh: the index is fetched, not the NAS it
-# points at) — see README.md.
+# points at) — see README_download.md.
 #
 # Usage : ./download_alkis.sh <state> [dataset] [output_dir]
 #   ./download_alkis.sh nw                  # NRW, NAS, -> ./alkis/nw

@@ -3,7 +3,7 @@
 
 The point is a map you can style: which states have a working downloader, which publish the
 data openly but resist bulk access, and which publish nothing. That question is answered in
-prose across README.md; this puts the same answer on geometry.
+prose across README_download.md; this puts the same answer on geometry.
 
 Boundaries come from BKG VG2500 (1:2,500,000 Verwaltungsgebiete), refetched on every run
 rather than vendored — the same rule the download_* scripts follow for their file lists.
@@ -25,7 +25,7 @@ import tempfile
 VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
           "vg2500_12-31.utm32s.gpkg.zip")
 
-# Coverage as recorded in README.md (verified live 2026-07-28).
+# Coverage as recorded in README_download.md (verified live 2026-07-28).
 # Those two documents remain the prose source of truth; this is their machine-readable form.
 #
 #   lidar_dgm1 / lidar_las : does the state publish it openly at all

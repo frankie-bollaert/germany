@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw this repo's per-state coverage as maps. Three of them, same geometry, same tiers.
 
-One per section of README.md, which answers the same questions in prose and tables; these put
-the answers on geometry, so a glance replaces a table read.
+One per section of README_download.md, which answers the same questions in prose and tables;
+these put the answers on geometry, so a glance replaces a table read.
 
   coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
             green    all four are scriptable today                                       (7)
@@ -117,7 +117,7 @@ W, H, PAD = 620, 800, 14
 LEGEND_BASE, LEGEND_ROW = 58, 20
 
 # Both maps label states with the repo-wide ID, so both say so. See "The state ID" in
-# README.md -- the ID is the ISO 3166-2 code minus the DE- prefix, and the same string
+# README_download.md -- the ID is the ISO 3166-2 code minus the DE- prefix, and the same string
 # indexes the GeoJSON, sample_squares.tsv, download_alkis.sh and the output trees.
 FOOTNOTE = "Labels are state IDs — ISO 3166-2 without the DE- prefix."
 

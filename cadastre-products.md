@@ -38,7 +38,7 @@ is an order, not a URL — [§2.5](#25-no-endpoint-either-way).
 ## What the parcel money actually buys
 
 Only two parcel gaps remain in the open route — BY and RP, see
-[The two content gaps](README.md#the-two-content-gaps).
+[The two content gaps](README_download.md#the-two-content-gaps).
 
 | | Open (`download_alkis.sh`) | FS-DE (ZSHH) | FS-BY (LDBV) |
 |---|---|---|---|
@@ -57,7 +57,7 @@ publishes an open ALKIS WFS, verified 2026-07-29. Bayern is the expensive one: *
 total bill for ~17% of the parcels**, and the single state no route makes free.
 
 What you also buy, for the 14 states you could have fetched yourself: one schema instead of
-fifteen, one CRS decision, one quarterly cycle, and no [NAS](README.md#nas--the-exchange-format)
+fifteen, one CRS decision, one quarterly cycle, and no [NAS](README_download.md#nas--the-exchange-format)
 parsing. That is the real product — convenience, not coverage.
 
 ---
@@ -226,7 +226,7 @@ address data. Coverage is **good but not complete**, and every state does it dif
 
 ✅ = scriptable direct URL, verified · ⚠️ = open but needs a service call, session or login ·
 ❌ = not available as open data · IDs are ISO 3166-2 without `DE-`, as everywhere else in this
-repo — see [The state ID](README.md#the-state-id)
+repo — see [The state ID](README_download.md#the-state-id)
 
 **Scriptable today: 9 states for HU, 5 states for HK.** For parcels it is 14 — see
 `download_alkis.sh`.

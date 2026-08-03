@@ -20,7 +20,7 @@
 # So it shows you where Bavaria's parcels are, and it is the only open product that does,
 # but it is raster: no geometry, no identifiers, no attributes. It cannot fill `plots`, and
 # it is not a substitute for the vector Flurstücke LDBV sells through GeodatenOnline. See
-# README.md, "The two content gaps".
+# README_download.md, "The two content gaps".
 #
 # Method  : same poly2metalink polygon service download_by_lidar.sh uses for `las`, but this
 #           product is capped at 10 km² per request, not 2000 — so the sweep steps in 3x3 km

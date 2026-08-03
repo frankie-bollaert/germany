@@ -40,7 +40,7 @@
 # that does not). Eleven cover the whole state; st fetches two sample areas, so a square
 # outside them plans zero tiles. The other four publish LiDAR openly but behind portals with
 # no anonymous bulk endpoint -- see
-# README.md. ALKIS is NOT wired in yet: download_alkis.sh has no BBOX support, so
+# README_download.md. ALKIS is NOT wired in yet: download_alkis.sh has no BBOX support, so
 # there is no way to ask it for a square. It is per-state or per-package until that lands.
 #
 # Usage : ./download_samples.sh [dgm1|las|both] [output_dir]
