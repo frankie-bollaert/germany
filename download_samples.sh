@@ -36,10 +36,10 @@
 # 5x5 km only on 1 km grids (bb, nw -> 25 tiles). On 2 km grids the same square yields 4-9
 # tiles covering a slightly different area. Comparable, not identical, between states.
 #
-# Coverage: 11 of 16 states have a LiDAR downloader, 10 of those accept BBOX (rp is the one
-# that does not). Ten cover the whole state; st fetches two sample areas, so a square outside
-# them plans zero tiles. The other five publish LiDAR openly but behind portals with no
-# anonymous bulk endpoint -- see
+# Coverage: 12 of 16 states have a LiDAR downloader, 11 of those accept BBOX (rp is the one
+# that does not). Eleven cover the whole state; st fetches two sample areas, so a square
+# outside them plans zero tiles. The other four publish LiDAR openly but behind portals with
+# no anonymous bulk endpoint -- see
 # README.md. ALKIS is NOT wired in yet: download_alkis.sh has no BBOX support, so
 # there is no way to ask it for a square. It is per-state or per-package until that lands.
 #
@@ -175,7 +175,7 @@ while IFS=$'\t' read -r key epsg bbox place why; do
   for ds in dgm1 las; do
     [[ "$DATASET" == "both" || "$DATASET" == "$ds" ]] || continue
     if ! offers "$script" "$ds"; then
-      NOTES+=("$key  $place — no $ds published")
+      NOTES+=("$key  $place — $script does not offer $ds")
       no_product=$((no_product + 1)); continue
     fi
     if ! cuttable "$key" "$ds" && [[ "${ALLOW_UNCUT:-0}" != "1" ]]; then
@@ -204,7 +204,7 @@ done < "$SQUARES"
 echo
 echo "──────────────────────────────────────────────────────────────"
 echo "downloads ok: $ok   failed: $failed"
-echo "skipped: $no_script no downloader · $no_bbox no BBOX · $no_product product not published"
+echo "skipped: $no_script no downloader · $no_bbox no BBOX · $no_product not offered by the script"
 if [[ ${#NOTES[@]} -gt 0 ]]; then
   echo
   printf '  %s\n' "${NOTES[@]}"

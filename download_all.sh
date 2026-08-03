@@ -3,7 +3,7 @@
 # download_all.sh — drive every per-state downloader in this repo from one command.
 #
 # The individual scripts each take one state and one dataset. This one walks the whole
-# matrix — 29 ALKIS combinations across 16 states, 19 LiDAR combinations across 11 — and
+# matrix — 29 ALKIS combinations across 16 states, 20 LiDAR combinations across 12 — and
 # lays the result out under a single predictable tree:
 #
 #     <root>/alkis/<state>-<dataset>/     e.g. ./alkis/nw-nas, ./alkis/bw-shape
@@ -25,7 +25,7 @@
 #   ./download_all.sh alkis            # 29 ALKIS combinations   -> ./alkis/<state>-<dataset>
 #   ./download_all.sh cadastre         # only what holds parcels or building footprints
 #   ./download_all.sh dgm1             # 10 terrain models       -> ./lidar/<state>-dgm1
-#   ./download_all.sh las              # 9 point clouds          -> ./lidar/<state>-las
+#   ./download_all.sh las              # 10 point clouds         -> ./lidar/<state>-las
 #   ./download_all.sh lidar            # dgm1 + las
 #   ./download_all.sh all /mnt/big     # everything, somewhere with room
 #   ./download_all.sh --list           # print the matrix and the size estimates, do nothing
@@ -119,6 +119,7 @@ lidar nw dgm1           79G       terrain                 -
 lidar nw las           3.5T       pointcloud              -
 lidar rp dgm1           33G       terrain                 -
 lidar rp las           5.2T       pointcloud              -
+lidar sl las           124G       pointcloud              -
 lidar sn dgm1          ?          terrain                 -
 lidar sn las           ?          pointcloud              -
 lidar st las          20.4G       pointcloud              -
@@ -140,6 +141,10 @@ note_for() {  # note_for <state> <dataset> <content>
       echo "Gemeinde Halle/Saale (51 tiles), ~0.1% of the state, NOT statewide coverage. The"
       echo "full 3D-Messdaten product is priced and on request. See README, Sachsen-Anhalt."
       return ;;
+    "sl las")
+      echo "Saarland's DGM1 and DOM1 are open too, in the same LVGL share, but only the point"
+      echo "cloud is wired into a script, so a full run fetches no SL terrain. See README, Saarland."
+      return ;;
     "th dgm1"|"th las")
       echo "Thüringen publishes three flight campaigns on the same grid; this takes the newest"
       echo "(2020-2025) unless VINTAGE= says otherwise. The dgm1/dom1 zips carry the same grid"
@@ -154,7 +159,7 @@ note_for() {  # note_for <state> <dataset> <content>
   esac
 }
 
-# LiDAR is scripted for 11 states, and two of those publish no point cloud at all:
+# LiDAR is scripted for 12 states, and two of those publish no point cloud at all:
 # Baden-Württemberg's 3DM product is flagged inactive (every URL 404s) and Niedersachsen's
 # STAC catalogue exposes raster only. Those combinations are absent from the matrix above
 # rather than left to fail at runtime.
