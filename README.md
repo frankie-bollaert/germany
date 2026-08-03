@@ -685,7 +685,7 @@ What `download_alkis.sh` actually fetches, per state:
 | `mv` | Mecklenburg-Vorpommern | `nas` | Gemeinde (~1,450 files) | — |
 | `ni` | Niedersachsen | `flurstueck`, `gebaeude` | WFS pages | ~6.3 M parcels |
 | `nw` | Nordrhein-Westfalen | `nas`, `gpkg` | Kreis (53) | ~25 GB |
-| `rp` | Rheinland-Pfalz | `lika`, `hu` | 1 km tile (20,511) | ~31 GB |
+| `rp` | Rheinland-Pfalz | `lika`, `hu` | `lika` 1 km tile (20,511) / `hu` statewide (1 zip) | ~31 GB / 334 MB |
 | `sl` | Saarland | `nas`, `shape` | Landkreis (7) | ~2.1 GB |
 | `sn` | Sachsen | `nas` | statewide | one ZIP |
 | `sh` | Schleswig-Holstein | `geojson` | statewide index | ~243 MB (index only) |

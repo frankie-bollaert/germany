@@ -587,16 +587,76 @@ PY
     --log="$DIR/.aria2.log"
 }
 
+# RP's Hausumringe manifest lists one <file> per past export order — 892203.zip, 1097875.zip,
+# ... — and every one of them points at the SAME url, /hu/current/zip/HAUSUMRINGE_RP.zip, which
+# serves only the current export. The stale entries carry stale sizes and hashes, so aria2 asks
+# for a byte range the server cannot satisfy ("Invalid range header"), and each one leaves a
+# preallocated quarter-gigabyte file behind that is not a valid zip. Six entries, 1.6 GB claimed,
+# one real 334 MB file. Left alone the loader then globs five corrupt zips.
+#
+# So entries sharing a url are collapsed to one before aria2 sees the manifest: a HEAD gives the
+# length the server will actually serve, and the entry whose <size> matches is the live export.
+# If none matches — the export moved on since the manifest was written — the largest is kept and
+# the mismatch reported, because guessing quietly is what produced the corrupt files.
 run_metalink() {
   need aria2c
   local m4="$DIR/.manifest.meta4"
   curl -fsS "$SRC_URL" -o "$m4"
   python3 - "$m4" <<'PY'
-import re, sys
-x = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-n = len(re.findall(r'<file ', x))
-tot = sum(int(s) for s in re.findall(r'<size>(\d+)</size>', x))
-print(f"    files: {n}  |  total: {tot/1e9:.2f} GB  |  manifest carries SHA-256 per file")
+import re, sys, urllib.request
+
+path = sys.argv[1]
+x = open(path, encoding="utf-8", errors="replace").read()
+head = x.split("<file ", 1)[0]
+entries = re.findall(r'(<file name="([^"]+)">(.*?)</file>)', x, re.S)
+
+def size_of(body):
+    m = re.search(r'<size>(\d+)</size>', body)
+    return int(m.group(1)) if m else -1
+
+def urls_of(body):
+    return tuple(re.findall(r'<url>([^<]+)</url>', body))
+
+def served_length(url):
+    req = urllib.request.Request(url, method="HEAD")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return int(r.headers.get("Content-Length", -1))
+    except Exception:
+        return -1
+
+groups, order = {}, []
+for whole, name, body in entries:
+    k = urls_of(body)
+    if k not in groups:
+        groups[k] = []
+        order.append(k)
+    groups[k].append((whole, name, body))
+
+kept, dropped = [], 0
+for k in order:
+    g = groups[k]
+    if len(g) == 1:
+        kept.append(g[0])
+        continue
+    live = served_length(k[0]) if k else -1
+    match = [e for e in g if size_of(e[2]) == live]
+    if match:
+        pick = match[0]
+    else:
+        pick = max(g, key=lambda e: size_of(e[2]))
+        print(f"    WARNING: {len(g)} entries share {k[0]} and none matches the served "
+              f"length ({live}); keeping the largest, {pick[1]}")
+    kept.append(pick)
+    dropped += len(g) - 1
+    print(f"    note: {len(g)} manifest entries share one url — keeping {pick[1]}, "
+          f"dropping {len(g)-1} stale export{'s' if len(g)-1 > 1 else ''}")
+
+if dropped:
+    open(path, "w", encoding="utf-8").write(head + "".join(e[0] for e in kept) + "</metalink>")
+
+tot = sum(size_of(e[2]) for e in kept)
+print(f"    files: {len(kept)}  |  total: {tot/1e9:.2f} GB  |  manifest carries SHA-256 per file")
 PY
   if [[ "$DRY_RUN" == "1" ]]; then echo "    DRY_RUN=1 — skipping download."; return 0; fi
   aria2c \
