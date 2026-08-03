@@ -24,6 +24,7 @@
 #   by     by-hausumringe    structures + versions                zipped Shapefile, per Bezirk
 #   mv     mv-nas            plots + structures + versions        zipped Shapefile, per Gemeinde
 #   nw     nw                plots + structures + versions        GeoPackage, per Kreis
+#   rp     rp / rp-hu        structures + versions                zipped Shapefile, statewide
 #   sn     sn / sn-nas       plots + structures + versions        NAS/GML in a nested zip
 #
 # Not loaded, and why:
@@ -38,7 +39,9 @@
 #   Bayern publishes no open vector Flurstücke at all, so `by` contributes no plots.
 #   mv-nas   the NAS half of MV's directory: every Gemeinde is published twice, and the
 #            Shapefile half carries the same content in a format that needs no NAS reader.
-#   The other fetched states (hb, he, hh, ni, rp, sh, sl, th) have no entry in
+#   rp       plots only: RP publishes no open vector Flurstücke, just a rasterised
+#            Liegenschaftskarte, so `rp` fills structures and contributes no plots.
+#   The other fetched states (hb, he, hh, ni, sh, sl, th) have no entry in
 #   DATASETS yet — downloads have run ahead of this loader.
 #
 # ---------------------------------------------------------------------------------------
@@ -145,6 +148,10 @@ DATASETS=(
   # every one of them fails: /vsizip/<nas>.zip/Flurstueck.shp does not exist.
   "mv plots      mv-nas          Flurstueck        zipshp  *_SHP_*.zip"
   "mv structures mv-nas          GebaeudeBauwerk   zipshp  *_SHP_*.zip"
+  # RP publishes Hausumringe as one statewide Shapefile, and no vector Flurstücke at all,
+  # so it contributes structures only. ./download_alkis.sh writes alkis/rp, download_all.sh
+  # sets OUTDIR and writes alkis/rp-hu — same split as Sachsen, so both are accepted.
+  "rp structures rp|rp-hu        gebaeude_hu       zipshp  *.zip"
   "nw plots      nw              Flurstueck        gpkg    *.gpkg"
   "nw structures nw              GebauedeBauwerk   gpkg    *.gpkg"
   "sn plots      sn|sn-nas       AX_Flurstueck     nas     *.zip"
@@ -234,6 +241,9 @@ fields_for() {
     mv-structures) echo "oid,aktualit,gebnutzbez,funktion,gfkzshh,rellage,name,anzahlgs,gmdschl,lagebeztxt" ;;
     nw-plots)      echo "oid,aktualit,idflurst,flaeche,flstkennz,land,landschl,gemarkung,gemaschl,flur,flurschl,flstnrzae,flstnrnen,regbezirk,regbezschl,kreis,kreisschl,gemeinde,gmdschl,abwrecht,lagebeztxt,tntxt" ;;
     nw-structures) echo "oid,aktualit,gebnutzbez,funktion,gfkzshh,rellage,name,anzahlgs,gmdschl,lagebeztxt" ;;
+    # RP's Hausumringe carry only six fields; AGS and the two SHAPE_* measures are not read
+    # by the mapping, so only the identifier and the function key are staged.
+    rp-structures) echo "oi,gfk" ;;
     # NAS: safe only because the fixed .gfs declares all of these for every part. Two are
     # genuinely absent from some parts (zeitpunktDerEntstehung 544/569,
     # abweichenderRechtszustand 397/569) and arrive as NULL there rather than aborting.
@@ -255,9 +265,14 @@ fields_for() {
 # branch concatenates, so a null code would yield NULL and be rejected by type NOT NULL.
 # Every one of the 2,539,965 buildings in this export does carry a code; the guard is for
 # the next one.
+#
+# The code column differs by state: Sachsen stages a numeric `gebaeudefunktion`, RP carries
+# the code as the second half of a text `GFK`, so the caller passes the expression to switch
+# on and the default keeps Sachsen reading as it did.
 gebaeudefunktion_case() {
-  cat <<'EOF'
-  coalesce(CASE gebaeudefunktion
+  local col="${1:-gebaeudefunktion}"
+  cat <<EOF
+  coalesce(CASE $col
     WHEN 1000 THEN 'Wohngebäude'
     WHEN 1100 THEN 'Gemischt genutztes Gebäude mit Wohnen'
     WHEN 2000 THEN 'Gebäude für Wirtschaft oder Gewerbe'
@@ -317,7 +332,7 @@ gebaeudefunktion_case() {
     WHEN 3221 THEN 'Hallenbad'
     WHEN 3240 THEN 'Gebäude für Kurbetrieb'
     WHEN 9998 THEN 'Nach Quellenlage nicht zu spezifizieren'
-    ELSE 'Gebäudefunktion ' || CAST(gebaeudefunktion AS VARCHAR)
+    ELSE 'Gebäudefunktion ' || CAST($col AS VARCHAR)
   END, 'Gebäude')
 EOF
 }
@@ -482,6 +497,28 @@ EOF
   oid                                                    AS local_id,
   coalesce(nullif(funktion, ''), nullif(gebnutzbez, ''), 'Gebäude')  AS type,
   aktualit                                               AS date_src
+EOF
+        ;;
+    # OI is the AAA object identifier — unique and non-empty across all 3,275,285 features
+    # in the 2026-07 export, so it needs no synthesising the way Bayern's does.
+    #
+    # GFK is "<AAA object type>_<function code>", e.g. 31001_1000. Only 31001 is AX_Gebaeude,
+    # and its second half is the same AdV Gebäudefunktion code Sachsen publishes, so it goes
+    # through the shared translation. The other three types are Bauwerke, not buildings —
+    # 51009_1610 (259,791), 51001_1001 (49), 51006_1440 (4) — and their codes come from a
+    # different AdV list, so reading them as Gebäudefunktion would invent wrong labels. They
+    # keep the raw GFK, tagged, exactly as an unrecognised Gebäude code does.
+    #
+    # RP dates the whole delivery rather than the feature: HU_OD-RP.csv in the zip carries
+    # "Aktualität 2026-06-03" and there is no per-building date, so date_src is null and the
+    # dataset-level snapdate applies. Pass FALLBACK_DATE to pin it to the stated Aktualität.
+    rp) cat <<EOF
+  oi                                                     AS local_id,
+  CASE WHEN starts_with(gfk, '31001_')
+       THEN $(gebaeudefunktion_case "try_cast(split_part(gfk, '_', 2) AS INTEGER)")
+       ELSE 'AAA ' || gfk
+  END                                                    AS type,
+  CAST(NULL AS DATE)                                     AS date_src
 EOF
         ;;
     sn) cat <<EOF
@@ -684,7 +721,8 @@ list_plan() {
   echo "            st (empty). Bayern publishes no open vector Flurstücke, so it has no plots."
   echo "            mv-nas (the NAS half of MV; the Shapefile half is loaded instead)."
   echo "            bb-nas (the NAS half of BB; the Shapefile half is loaded instead)."
-  echo "            hb, he, hh, ni, rp, sh, sl, th are downloaded but not yet mapped."
+  echo "            RP publishes no open vector Flurstücke either, so it has no plots."
+  echo "            hb, he, hh, ni, sh, sl, th are downloaded but not yet mapped."
   exit 0
 }
 
