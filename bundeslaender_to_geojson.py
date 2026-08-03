@@ -78,9 +78,18 @@ COVERAGE = {
                lidar_dgm1=True, lidar_las=True, lidar_script="download_by_lidar.sh",
                lidar_bbox=True, lidar_note=None,
                alkis="partial", alkis_engine="aria2", alkis_spatial="package"),
+    # The 2025 laser scan is open and statewide in the LVGL Nextcloud share, DGM1 and DOM1
+    # alongside it. lidar_dgm1=True says the STATE publishes terrain openly, which it does --
+    # but download_sl_lidar.sh currently fetches the point cloud only, so the green tier
+    # overstates the repo by one product. The map has no way to say "one of two wired in":
+    # lidar_dgm1=False would paint sl red, and red on this map means "no point cloud
+    # published", which is flatly wrong. Green plus this note is the least misleading of the
+    # three available answers.
     "sl": dict(name_short="Saarland",
-               lidar_dgm1=False, lidar_las=False, lidar_script=None, lidar_bbox=None,
-               lidar_note="No open LiDAR bulk product identified.",
+               lidar_dgm1=True, lidar_las=True, lidar_script="download_sl_lidar.sh",
+               lidar_bbox=True,
+               lidar_note="Point cloud is scripted; DGM1/DOM1 are open in the same LVGL share "
+                          "(laz and GeoTIFF) but not yet wired into the downloader.",
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "be": dict(name_short="Berlin",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_be_lidar.sh",
