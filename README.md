@@ -485,7 +485,7 @@ footprints?** Footprint sources are detailed in
 
 **Seven states: BB, BE, MV, NW, SN, TH, SL.**
 
-<img src="coverage_map.png" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, ST) for no bulk LiDAR" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, ST) for no bulk LiDAR" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
@@ -1010,7 +1010,7 @@ and all machine-readable data:
 | Where | Form | Example |
 |-------|------|---------|
 | Tables and prose in these documents | upper case | `NW`, `RP` |
-| Map labels on `coverage_map.png` / `alkis_map.svg` | upper case | `NW`, `RP` |
+| Map labels on `coverage_map.svg` / `alkis_map.svg` | upper case | `NW`, `RP` |
 | `bundeslaender.geojson` — the `key` property | lower case | `"key": "nw"` |
 | `sample_squares.tsv` — first column | lower case | `nw` |
 | `download_alkis.sh <id>` | lower case | `./download_alkis.sh nw` |
