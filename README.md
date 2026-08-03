@@ -13,6 +13,7 @@ found, not because the data is gated.
 | **ALKIS → DuckDB tables** | `alkis_to_duckdb.sh` | [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) |
 | **DuckDB → GeoParquet** | `duckdb_to_geoparquet.sh` | [Exporting to GeoParquet](#exporting-to-geoparquet) |
 | **LiDAR, sample squares only** | `download_samples.sh` | [A 5×5 km square per state](#lidar-for-the-sample-squares-only) |
+| **BY cadastral map (raster)** | `download_by_parzellarkarte.sh` | [Bayern's Parzellarkarte](#bayerns-parzellarkarte-the-cadastre-as-a-picture) |
 | **Hauskoordinaten / Hausumringe** | *(source inventory only, no script yet)* | [`cadastre-products.md`](cadastre-products.md) |
 | **Nationwide parcels, paid** | *(not scriptable — ships on a USB drive)* | [`cadastre-products.md`](cadastre-products.md) |
 
@@ -746,10 +747,32 @@ parcels and RP only a rasterised cadastral map.
 cadastre openly; the two exceptions are content gaps at the source, not access barriers:
 
 - **Bayern** — the *ALKIS-Parzellarkarte* is published as **raster only** (WMS/WMTS and
-  GeoTIFF via Metalink). Open vector products are limited to *Tatsächliche Nutzung*
-  (statewide GeoPackage, ~5 GB), *Hausumringe* (Shape per Regierungsbezirk) and
-  *Verwaltungsgebiete*. Vector parcel geometry is sold through GeodatenOnline, which does
-  require an account.
+  GeoTIFF via Metalink) — it *is* open and it *is* downloadable, see
+  [Bayern's Parzellarkarte](#bayerns-parzellarkarte-the-cadastre-as-a-picture); what is
+  missing is vector. Open vector products are limited to *Tatsächliche Nutzung*
+  (statewide GeoPackage, ~5 GB), *Landnutzung* (statewide GeoPackage, 5.7 GB — see below),
+  *Hausumringe* (Shape per Regierungsbezirk) and *Verwaltungsgebiete*. Vector parcel geometry
+  is sold through GeodatenOnline, which does require an account.
+
+  **`landnutzung.gpkg` is not parcel data**, despite being a large statewide ALKIS-derived
+  vector GeoPackage — worth stating plainly, because it is the most parcel-looking thing
+  Bayern publishes openly. Verified against the live file 2026-07-31 (read over HTTP range
+  requests, no download):
+
+  ```bash
+  CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.gpkg \
+    ogrinfo -so /vsicurl/https://geodaten.bayern.de/odd/m/3/daten/ln/landnutzung.gpkg
+  ```
+
+  It holds **21 layers, one per land-use category** — `ln_wohnnutzung`, `ln_landwirtschaft`,
+  `ln_forstwirtschaft`, `ln_bahnverkehr`, `ln_abbau`, `ln_sportanlage`, … — in EPSG:25832.
+  The attributes are `uuid`, `beginnt`, `anlass`, `name`, `zeitlichkeit`, `zustand`,
+  `datumderletztenueberpruefung`, `ergebnisderueberpruefung`, `istweiterenutzung`,
+  `mappingannahme`, `quellobjektid`. **There is no `flurstueckskennzeichen`, no
+  Gemarkung/Flur/Zähler/Nenner, no parcel identifier of any kind**, and the polygons are
+  use-areas that merge across parcel boundaries rather than following them. It is the same
+  family as `by-tn` and fills neither `plots` nor `structures`. Neither `ln` nor `tn` is a
+  substitute for the Flurstücke Bayern keeps behind GeodatenOnline.
 - **Rheinland-Pfalz** — publishes the **rasterised** Liegenschaftskarte (`lika`, ~20,500
   GeoTIFF tiles, ~31 GB) and *Hausumringe*, but no bulk vector ALKIS. Parcel geometry is
   reachable only per-query through the Flurstückssuche WFS.
@@ -760,6 +783,56 @@ route: the CISS-Shop sells RP vector ALKIS for a drawn polygon at official state
 DXF/Shape/NAS. Costs, licences, the free FS-DE test Shapefile and the wider commercial market
 (geomer, infas 360, Nexiga, CISS TDI, per-object retail):
 [`cadastre-products.md`](cadastre-products.md).
+
+### Bayern's Parzellarkarte: the cadastre as a picture
+
+Bayern's gap is a *vector* gap, not a total one. The **ALKIS-Parzellarkarte** is open data
+under **CC BY 4.0**, and it is the only open product that shows where Bavaria's parcels are.
+`download_by_parzellarkarte.sh` fetches it. Verified live 2026-07-31.
+
+It carries Flurkarte content — parcel boundaries, buildings, Lagebezeichnungen, TN objects —
+but per LDBV's own product text **`keine Flurstücksnummern und keine Grenzzeichen`**, with
+every boundary drawn as one uniform solid line. The numbers legible on the map are *house*
+numbers, not parcel numbers. It is raster: no geometry, no identifiers, no attributes, so it
+fills neither `plots` nor `structures`.
+
+The bulk route is the **same `poly2metalink` service `download_by_lidar.sh` uses for `las`**,
+but this product is capped at **10 km² per request**, not 2000, so the sweep steps in 3×3 km
+cells. The cap is read from the service at run time rather than hard-coded, so an upstream
+change fails loudly instead of as a wall of rejected polygons:
+
+```
+https://geoservices.bayern.de/services/poly2metalink/datasets/parzellarkarte
+→ {"maxPointsPerGeom":20000,"areaLimitQkm":"10","maxTilesToZip":4,"type":"wms","imageFormat":"tiff"}
+```
+
+`type: "wms"` is the part that matters. Each returned tile is a WMS `GetMap` call rendered
+**on demand** — 11811 × 11811 px at 300 DPI, ~8.5 cm/px, LZW RGB GeoTIFF in EPSG:25832,
+**~22 MB and ~20 s of server time each**, in town and open country alike (LZW on 139
+megapixels lands in the same place either way). There are no sizes and no checksums in the
+metalink, so downloads are resumable but not hash-verified, and `JOBS` defaults to 4 rather
+than the 8 the other downloaders use.
+
+That per-tile cost is why **a statewide run is refused unless you pass `ALLOW_STATEWIDE=1`**:
+Bavaria's ~70,550 km² would be ~1.5 TB and roughly 400 hours of rendering, requested through
+~7,800 POSTs to a live service. Pass a `BBOX` instead.
+
+```bash
+# the repo's Bayern sample square — Garmisch-Partenkirchen, 25 tiles, ~0.5 GB
+BBOX="656,5260,661,5265" ./download_by_parzellarkarte.sh ../germany-data/by_parzellarkarte
+DRY_RUN=1 BBOX="690,5334,693,5337" ./download_by_parzellarkarte.sh   # plan only
+```
+
+Two other routes exist for the same product, both free: a
+[WMS](https://geoservices.bayern.de/od/wms/alkis/v1/parzellarkarte) (PNG/JPEG, six CRS, daily)
+and a [WMTS](https://geoservices.bayern.de/od/wmts/geobasis/v1/1.0.0/WMTSCapabilities.xml),
+which is tile-cached and therefore the cheaper option for wide-area use.
+
+The product catalogue that documents all three is machine-readable, and is how the endpoints
+above were found rather than guessed — worth knowing, because the `OpenDataDetail.html` pages
+are JS-driven and contain nothing useful when fetched directly:
+`https://geodaten.bayern.de/opengeodata/json/opengeodata_datensaetze.json` (124 records
+across 35 products).
 
 **Sachsen-Anhalt used to be listed here as a third gap.** It is not one: LVermGeo publishes
 `ST_LVermGeo_ALKIS_WFS_OpenData`, an anonymous WFS 2.0 carrying `ave:Flurstueck` (~2.7 M),

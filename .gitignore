@@ -5,6 +5,7 @@
 samples/
 alkis/
 lidar/
+by_parzellarkarte/
 .download_all.failures
 
 # Derived from that data by alkis_to_duckdb.sh — rebuildable, so never committed either.
