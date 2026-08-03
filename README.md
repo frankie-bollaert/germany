@@ -1,9 +1,11 @@
 # German geodata coverage by Bundesland
 
-Per-state availability tables. Everything else — how the downloaders work, the
+Per-state availability, as maps and tables. Everything else — how the downloaders work, the
 per-state notes, the DuckDB loading — is in [`README_download.md`](README_download.md).
 
-# 2. LiDAR / terrain availability
+# 1. LiDAR / terrain availability
+
+<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, HH, SH, ST) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Bulk downloader | CRS | Licence |
 |----|-------|:-----------:|:----------:|-----------------|-----|---------|
@@ -24,7 +26,9 @@ per-state notes, the DuckDB loading — is in [`README_download.md`](README_down
 | **SH** | Schleswig-Holstein | ❌ | ⚠️ | — | 25832 | open |
 | **TH** | Thüringen | ✅ | ✅ | `download_th_lidar.sh` (`las`, `dgm1`, `dom1`) | 25832 | DL-DE/BY 2.0 |
 
-# 3. ALKIS / cadastre availability
+# 2. ALKIS / cadastre availability
+
+<img src="alkis_map.svg" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 14 states publishing vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only" width="560">
 
 | ID | State | ALKIS as open data | Download | How | Format · unit | License |
 |----|-------|--------------------|----------|-----|---------------|---------|
@@ -45,7 +49,9 @@ per-state notes, the DuckDB loading — is in [`README_download.md`](README_down
 | **SH** | Schleswig-Holstein | ✅ full (oE), but two-step | **anonymous** | index file → per-Flur NAS | GeoJSON index (~243 MB) → `.xml.gz` per Flur | CC BY 4.0 |
 | **TH** | Thüringen | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | Shape, NAS · Flur (~16,500) | DL-DE/BY 2.0 |
 
-# 1. Complete coverage — all four datasets
+# 3. Complete coverage — all four datasets
+
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, HH, SH, ST) for no bulk LiDAR endpoint, dark red (BW, NI) for no point cloud published" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
