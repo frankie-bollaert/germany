@@ -524,8 +524,9 @@ grid, released campaign by campaign.
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
 `bundeslaender.geojson`, so they follow the data rather than these tables. Regenerate all
-three with `./coverage_map.py all` after any coverage change; each also has an `.svg` beside
-its `.png`, same image as vector, with a per-state tooltip the PNG cannot carry.
+three with `./coverage_map.py all` after any coverage change; the script writes both an `.svg`
+and a `.png` per map, same image either way, but only the vector one carries a per-state
+tooltip.
 
 ## Why the other nine fall short
 
@@ -573,7 +574,7 @@ ONLY=<id> ./download_all.sh all                 # all four datasets, statewide v
 The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
 whether you have to click through an interactive portal.
 
-<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, HH, SH, ST) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
+<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, HH, SH, ST) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
 
 Green is the nine states whose elevation a script reaches — eight with both products
 scripted, plus SL, where the point cloud is scripted and the terrain is open in the same
@@ -828,7 +829,7 @@ Nutzung*), addresses. Each state runs its own, so each publishes it differently 
 all. Owner names (*Eigentümerangaben*) are **never** open data anywhere; what states release
 is the *ohne Eigentümer* (oE) variant.
 
-<img src="alkis_map.png" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 14 states publishing vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only" width="560">
+<img src="alkis_map.svg" alt="Map of the 16 Bundesländer coloured by cadastre openness: green for the 14 states publishing vector ALKIS ohne Eigentümer, orange for BY and RP which publish a raster cadastral map only" width="560">
 
 Fourteen states are green. The two orange ones are not a delivery problem — BY and RP publish
 their cadastre as **raster**, so the download works fine and parcel geometry simply is not in
@@ -1009,7 +1010,7 @@ and all machine-readable data:
 | Where | Form | Example |
 |-------|------|---------|
 | Tables and prose in these documents | upper case | `NW`, `RP` |
-| Map labels on `coverage_map.png` / `alkis_map.png` | upper case | `NW`, `RP` |
+| Map labels on `coverage_map.png` / `alkis_map.svg` | upper case | `NW`, `RP` |
 | `bundeslaender.geojson` — the `key` property | lower case | `"key": "nw"` |
 | `sample_squares.tsv` — first column | lower case | `nw` |
 | `download_alkis.sh <id>` | lower case | `./download_alkis.sh nw` |
