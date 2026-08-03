@@ -101,15 +101,18 @@ COVERAGE = {
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "st": dict(name_short="Sachsen-Anhalt",
                lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
-               lidar_note="Open since 2023 including classified laser scan, but the advertised "
-                          "Atom endpoint was not locatable and the web UI caps selection at 5 tiles.",
+               # download_st_lidar.sh exists but stays lidar_script=None on purpose: it fetches
+               # the two published sample areas (~0.1% of the state), and this field feeds a map
+               # about bulk access to a whole state. See README, "Sachsen-Anhalt: samples, not a
+               # state".
+               lidar_note="Statewide 3D-Messdaten is priced and on request; only two sample "
+                          "areas are open (download_st_lidar.sh). DGM1 UI caps selection at 5 tiles.",
                # ALKIS-vereinfacht 2.0 over an anonymous WFS 2.0 (ST_LVermGeo_ALKIS_WFS_OpenData):
                # parcels, buildings and Nutzung, no Punktinformationen. Verified 2026-07-29.
                alkis="full", alkis_engine="wfs2", alkis_spatial="exact"),
     "th": dict(name_short="Thueringen",
-               lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
-               lidar_note="gaialight app; overview.php/details.php need a 'type' key that is not "
-                          "derivable from the client config, and the public RSS is a change log.",
+               lidar_dgm1=True, lidar_las=True, lidar_script="download_th_lidar.sh",
+               lidar_bbox=True, lidar_note=None,
                alkis="full", alkis_engine="aria2", alkis_spatial="flur"),
 }
 

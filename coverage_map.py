@@ -76,11 +76,13 @@ HOUSES = {
     "sn": True,   # hu_sn_shape.zip (ranged GET -- the share 401s on HEAD)
     "st": True,   # Hausumringe.zip, direct; also ave:GebaeudeBauwerk in the ALKIS WFS
     "sh": True,   # inside the statewide ALKIS GeoJSON
-    "th": False,  # HU/HK are CAPTCHA-gated; ALKIS Shape/NAS is not, but see note below
+    "th": True,   # inside the per-Flur ALKIS Shape/NAS packages (standalone HU/HK are
+                  # CAPTCHA-gated, but that is a second route, not the only one)
 }
-# th is False on footprints only because the standalone HU product is CAPTCHA-gated. Its
-# ALKIS packages do carry AX_Gebaeude, so th is arguably 3/4 -- it lands red either way,
-# since it has no bulk elevation at all, which is the stronger constraint.
+# th used to be False here, justified by the standalone HU/HK products being CAPTCHA-gated and
+# by th landing red anyway for want of bulk elevation. Both halves are gone: download_th_lidar.sh
+# fetches the elevation, and "inside the ALKIS package" is exactly what already counts as True
+# for bb, sl, sh and hh. Judging th by a stricter rule than its neighbours was the bug.
 
 # (stroke, fill). Which tier gets which colour is a per-map decision -- see each map's legend
 # in MAPS below -- because "worst" is not the same question on every map.

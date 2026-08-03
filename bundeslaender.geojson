@@ -16065,8 +16065,40 @@
         53.03914
        ],
        [
-        8.80742,
-        53.03188
+        8.80092,
+        53.03354
+       ],
+       [
+        8.82216,
+        53.02115
+       ],
+       [
+        8.84422,
+        53.0174
+       ],
+       [
+        8.86069,
+        53.01978
+       ],
+       [
+        8.86633,
+        53.02445
+       ],
+       [
+        8.86329,
+        53.03412
+       ],
+       [
+        8.86996,
+        53.03528
+       ],
+       [
+        8.87585,
+        53.0332
+       ],
+       [
+        8.89623,
+        53.01316
        ],
        [
         8.89665,
@@ -16093,8 +16125,16 @@
         53.05452
        ],
        [
-        8.94911,
-        53.11729
+        8.96433,
+        53.07764
+       ],
+       [
+        8.96642,
+        53.09291
+       ],
+       [
+        8.95877,
+        53.10657
        ],
        [
         8.9516,
@@ -16652,8 +16692,16 @@
         53.11825
        ],
        [
-        8.94911,
-        53.11729
+        8.95877,
+        53.10657
+       ],
+       [
+        8.96642,
+        53.09291
+       ],
+       [
+        8.96433,
+        53.07764
        ],
        [
         8.97319,
@@ -16680,8 +16728,40 @@
         53.01307
        ],
        [
-        8.80742,
-        53.03188
+        8.89623,
+        53.01316
+       ],
+       [
+        8.87585,
+        53.0332
+       ],
+       [
+        8.86996,
+        53.03528
+       ],
+       [
+        8.86329,
+        53.03412
+       ],
+       [
+        8.86633,
+        53.02445
+       ],
+       [
+        8.86069,
+        53.01978
+       ],
+       [
+        8.84422,
+        53.0174
+       ],
+       [
+        8.82216,
+        53.02115
+       ],
+       [
+        8.80092,
+        53.03354
        ],
        [
         8.77902,
@@ -20477,6 +20557,10 @@
        [
         6.05511,
         51.85259
+       ],
+       [
+        6.06366,
+        51.86538
        ],
        [
         6.10279,
@@ -66811,7 +66895,7 @@
     "lidar_las": true,
     "lidar_script": null,
     "lidar_bbox": null,
-    "lidar_note": "Open since 2023 including classified laser scan, but the advertised Atom endpoint was not locatable and the web UI caps selection at 5 tiles.",
+    "lidar_note": "Statewide 3D-Messdaten is priced and on request; only two sample areas are open (download_st_lidar.sh). DGM1 UI caps selection at 5 tiles.",
     "alkis": "full",
     "alkis_engine": "wfs2",
     "alkis_spatial": "exact",
@@ -70681,12 +70765,12 @@
     "bez": "Freistaat",
     "ars": "16",
     "nuts": "DEG",
-    "status": "alkis only",
+    "status": "lidar+alkis",
     "lidar_dgm1": true,
     "lidar_las": true,
-    "lidar_script": null,
-    "lidar_bbox": null,
-    "lidar_note": "gaialight app; overview.php/details.php need a 'type' key that is not derivable from the client config, and the public RSS is a change log.",
+    "lidar_script": "download_th_lidar.sh",
+    "lidar_bbox": true,
+    "lidar_note": null,
     "alkis": "full",
     "alkis_engine": "aria2",
     "alkis_spatial": "flur",
