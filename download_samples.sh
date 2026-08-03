@@ -36,8 +36,10 @@
 # 5x5 km only on 1 km grids (bb, nw -> 25 tiles). On 2 km grids the same square yields 4-9
 # tiles covering a slightly different area. Comparable, not identical, between states.
 #
-# Coverage: 9 of 16 states have a LiDAR downloader, 8 of those accept BBOX. The other seven
-# publish LiDAR openly but behind portals with no anonymous bulk endpoint -- see
+# Coverage: 11 of 16 states have a LiDAR downloader, 10 of those accept BBOX (rp is the one
+# that does not). Ten cover the whole state; st fetches two sample areas, so a square outside
+# them plans zero tiles. The other five publish LiDAR openly but behind portals with no
+# anonymous bulk endpoint -- see
 # README.md. ALKIS is NOT wired in yet: download_alkis.sh has no BBOX support, so
 # there is no way to ask it for a square. It is per-state or per-package until that lands.
 #
