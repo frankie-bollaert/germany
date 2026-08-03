@@ -7,7 +7,7 @@ found, not because the data is gated.
 
 | Data | Downloader | Coverage |
 |------|------------|----------|
-| **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states |
+| **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 9 of 16 states statewide, + ST sample areas |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
 | **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
 | **ALKIS → DuckDB tables** | `alkis_to_duckdb.sh` | [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) |
@@ -434,9 +434,11 @@ What a `both` run actually plans, verified live 2026-07-29:
 | BE Berlin-Mitte | 9 tiles | 1 region (0.9 GB) | las ships as city-region ZIPs, not tiles — cut by region, not by square |
 | BY Garmisch | refused | 4 tiles | dgm1 is one statewide Metalink, uncuttable |
 | RP St. Goarshausen | refused | refused | no `BBOX` support at all |
+| ST Wernigerode | — | **0** | no open dgm1; the square is outside both open LAZ areas |
 
-The seven states with no LiDAR downloader (HB, HH, HE, SL, ST, SH, TH) are skipped with a
-reason. **Refusals are the point**: a downloader that ignores `BBOX` accepts the square and
+The six states with no LiDAR downloader (HB, HH, HE, SL, SH, TH) are skipped with a
+reason. ST now has one, but its square (Wernigerode) sits outside both areas Sachsen-Anhalt
+publishes openly, so it plans 0 tiles and is reported as a coverage gap. **Refusals are the point**: a downloader that ignores `BBOX` accepts the square and
 plans the whole state, so RP alone would pull 32.8 GB of terrain and 5.18 TB of point cloud
 under the guise of a sample. Each is detected and refused rather than skipped quietly;
 `ALLOW_UNCUT=1` forces them, which is only useful with `DRY_RUN=1` to see the size.
@@ -518,7 +520,7 @@ endpoint found · ❌ not published as open data.
 | **BW** | Baden-Württemberg | ❌ `3DM` flagged inactive, every URL 404s | ✅ `download_bw_lidar.sh` — ~125 GB | ✅ `download_alkis.sh bw` — NAS/Shape, ~3,380 Gemarkungen | ✅ inside that package; also standalone HU + HK ZIPs |
 | **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **TH** | Thüringen | ⚠️ `gaialight` app, inventory not derivable | ⚠️ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK CAPTCHA-gated) |
-| **ST** | Sachsen-Anhalt | ⚠️ Atom advertised but not locatable; UI caps at 5 tiles | ⚠️ same | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
+| **ST** | Sachsen-Anhalt | ◐ `download_st_lidar.sh` — 2 sample areas (62 tiles); statewide is priced/on request | ⚠️ free, but the UI caps a selection at 5 tiles | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
 | **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ⚠️ `download_alkis.sh sh` fetches the **Flur index** (~243 MB); the NAS is behind its `LINK_DATA` links | ⚠️ HU/HK only through the interactive download client |
 | **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
@@ -561,7 +563,12 @@ elevation openly but only through a portal — everything is there, just not scr
 BW and NI, which are scripted and working but publish **no point cloud at all**, so there is
 nothing further to fetch however you ask. Regenerate with `./coverage_map.py lidar`.
 
-Legend below: ✅ available and scripted · ⚠️ open but no bulk endpoint found · ❌ not published.
+ST stays orange despite having a downloader: the map is about fetching a *state* in bulk, and
+what Sachsen-Anhalt gives away anonymously is two sample areas — the statewide point cloud is
+still portal-and-invoice only. See [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
+
+Legend below: ✅ available and scripted · ◐ scripted, but the open data is sample areas rather
+than the state · ⚠️ open but no bulk endpoint found · ❌ not published.
 
 | ID | State | Point cloud | DTM (DGM1) | Bulk downloader | CRS | Licence |
 |----|-------|:-----------:|:----------:|-----------------|-----|---------|
@@ -578,14 +585,16 @@ Legend below: ✅ available and scripted · ⚠️ open but no bulk endpoint fou
 | **RP** | Rheinland-Pfalz | ✅ | ✅ | `download_rlp_lidar.sh` † | 25832 | DL-DE/BY 2.0 |
 | **SL** | Saarland | ⚠️ | ⚠️ | — | — | — |
 | **SN** | Sachsen | ✅ | ✅ | `download_sn_lidar.sh` | 25833 | DL-DE/Zero 2.0 |
-| **ST** | Sachsen-Anhalt | ⚠️ | ⚠️ | — | 25832 | DL-DE/BY 2.0 (since 2023) |
+| **ST** | Sachsen-Anhalt | ◐ | ⚠️ | `download_st_lidar.sh` (`las`, samples only) | 25832 | DL-DE/BY 2.0 (since 2023) |
 | **SH** | Schleswig-Holstein | ❌ | ⚠️ | — | 25832 | open |
 | **TH** | Thüringen | ⚠️ | ⚠️ | — | 25832 | DL-DE/BY 2.0 |
 
 † The two script filenames that do not match their ID — see [The state ID](#the-state-id).
 
-**9 of 16 states are scripted** — covering roughly two thirds of Germany's land area and,
-between them, well over 10 TB of point cloud.
+**9 of 16 states are scripted statewide** — covering roughly two thirds of Germany's land area
+and, between them, well over 10 TB of point cloud. ST adds a tenth downloader, but only for
+the two sample areas it publishes openly (see [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)),
+so it is not counted in the nine and stays orange on the map above.
 
 ## Volumes for the scripted states
 
@@ -600,8 +609,45 @@ between them, well over 10 TB of point cloud.
 | **RP** | Rheinland-Pfalz | ~21,207 tiles (1 km), 5.18 TB | ~21,082 tiles (1 km), 32.8 GB |
 | **SN** | Sachsen | 4,981 tiles (2 km) | 4,981 tiles (2 km) |
 | **BW** | Baden-Württemberg | ❌ none published | 9,370 zips (2 km), ~125 GB |
+| **ST** | Sachsen-Anhalt | 62 tiles (2 km), 20.4 GB — **two sample areas only** | ❌ no bulk endpoint |
 
-## The other seven states
+## Sachsen-Anhalt: samples, not a state
+
+Sachsen-Anhalt is the one state where a downloader exists but the coverage does not. It is
+listed apart from the nine because treating it as "scripted" would overstate what you get.
+
+LVermGeo publishes the statewide point cloud (`3D-Messdaten`, ALS, 4–8 pts/m², classified,
+LAS 1.2 / PDRF 3) as a **priced, application-only product** — 190 € per Datensatz, "auf
+Antrag". No Atom feed, no WFS, no tile API exposes it, and the free DGM1/DOM1 map downloader
+caps a selection at five tiles per request. What *is* free, anonymous and scriptable is two
+published sample areas, and that is exactly what `download_st_lidar.sh` fetches:
+
+| Area | `AREAS=` | Tiles | Size | Flown |
+|------|----------|-------|------|-------|
+| Gebiet Hakel | `hakel` | 11 | 2.9 GB | 2019 |
+| Gemeinde Halle (Saale) | `halle` | 51 | 17.4 GB | 2017 (one tile 2021) |
+
+Together ~0.1% of the state — two islands, not a coverage layer. Tiles are 2 km,
+`3dm_32_<E_km>_<N_km>_2_st_<year>.laz`, UTM32 / DHHN2016, carrying Intensity and RGB.
+
+Both areas are plain ZIPs on the LVermGeo webshare (Halle is ZIP64, over 4 GB). The script
+does **not** download the archives whole: it reads each central directory over HTTP range
+requests, then range-fetches and inflates only the tiles selected, straight to `.laz`. So
+`BBOX` works and costs only the tiles it selects, nothing is staged twice on disk, and resume
+is per tile.
+
+```bash
+./download_st_lidar.sh las ../germany-data/st_lidar   # both areas, ~20 GB
+AREAS=hakel ./download_st_lidar.sh                    # just the 2.9 GB one
+DRY_RUN=1 ./download_st_lidar.sh                      # list the 62 tiles, fetch nothing
+BBOX="658,5746,662,5750" AREAS=hakel ./download_st_lidar.sh
+```
+
+`dgm1` is refused rather than half-implemented, with a pointer to the 5-tile widget. Note the
+repo's ST sample square (Wernigerode) falls in neither area, so `download_samples.sh` plans
+**0 tiles** for ST and says so — that is a real coverage gap, not a broken downloader.
+
+## The other six states
 
 These are **also open data** — none of them puts the LiDAR behind a login — but no anonymous
 *bulk* endpoint was verified, so there is no script. The blocker is delivery mechanics, not
@@ -611,7 +657,6 @@ access rights.
 |----|-------|--------|----------------------|
 | **TH** | Thüringen | Open, DL-DE/BY 2.0. DGM, DOM **and LAZ** offered. | Delivery via the `gaialight` map app. Its `overview.php`/`details.php` need a `type` key that isn't derivable from the client config; the public RSS is a change log, not an inventory. |
 | **SH** | Schleswig-Holstein | Open. DGM1 only — the open-data catalogue lists **no** point cloud. | Same `gaialight` app; `overview.php` returns an empty FeatureCollection without the app's internal filter state. |
-| **ST** | Sachsen-Anhalt | Open since 2023-07-01, DL-DE/BY 2.0, explicitly including classified laser scan results. Atom feeds are advertised. | The advertised Atom endpoint was not locatable under the documented host; the web UI caps manual selection at 5 tiles. |
 | **HE** | Hessen | Open since 2022-02-01, no usage conditions. DGM1 free in the Downloadcenter. | Delivery through an Intershop storefront (`gds.hessen.de`); no static index or feed found. |
 | **HH** | Hamburg | Open via the Transparenzportal. DGM1 published; no point cloud found. | `daten-hamburg.de` returns 403 on directory listings, so tiles can only be reached by exact known URL. |
 | **HB** | Bremen | No open LiDAR bulk product identified. | — |
@@ -1266,11 +1311,22 @@ repo's coverage as feature properties.
 - DGM Atom: <https://www.geodaten-mv.de/dienste/dgm_atom> · ALS Atom: <https://www.geodaten-mv.de/dienste/als_atom>
 - Open-data overview: <https://www.laiv-mv.de/Geoinformation/Open_Data_Angebot/>
 
+**ST**
+
+- Open data portal: <https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html>
+- Product page (3D-Messdaten, priced/on request): <https://www.lvermgeo.sachsen-anhalt.de/de/gdp-3d-messdaten.html>
+- The two open LAZ areas, direct (range-capable ZIPs):
+  - `…/gfds_webshare/download/LVermGeo/Geodatenportal/externedaten/Hakel.zip` (2.9 GB)
+  - `…/gfds_webshare/download/LVermGeo/Geodatenportal/externedaten/Gemeinde_HalleSaale.zip` (17.4 GB, ZIP64)
+  - host: <https://www.geodatenportal.sachsen-anhalt.de>
+- DGM1/DOM1 map downloader (5-tile cap): <https://www.lvermgeo.sachsen-anhalt.de/de/gdp-dgm1.html>
+  · its backend is `…/de/mod/2,2913,501/ajax/1/prepare/?`, and the page inlines the whole tile grid as GeoJSON
+- Statewide DGM5 as one free ZIP: `…/Online-Bereitstellung-LVermGeo/DGM/DGM5.zip`
+
 **States without a LiDAR script** (starting points if you want to add one)
 
 - TH: <https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/dl-dhm.html>
 - SH: <https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/dl-dgm1.html>
-- ST: <https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html>
 - HE: <https://hvbg.hessen.de/geoinformation/open-data>
 - HH: <https://suche.transparenz.hamburg.de/> (CKAN API at `/api/3/action/package_search`)
 

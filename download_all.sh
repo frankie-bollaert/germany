@@ -121,6 +121,7 @@ lidar rp dgm1           33G       terrain                 -
 lidar rp las           5.2T       pointcloud              -
 lidar sn dgm1          ?          terrain                 -
 lidar sn las           ?          pointcloud              -
+lidar st las          20.4G       pointcloud              -
 EOF
 )"
 
@@ -131,6 +132,11 @@ note_for() {  # note_for <state> <dataset> <content>
       echo "ALKIS_SH_Massendownload.geojson is an INDEX, not the cadastre: one polygon per Flur,"
       echo "each carrying a LINK_DATA URL to that Flur's NAS .xml.gz. The parcels and buildings"
       echo "are behind those links — this fetches the index only. See README, Schleswig-Holstein."
+      return ;;
+    "st las")
+      echo "Sachsen-Anhalt's OPEN point cloud is two sample areas — Gebiet Hakel (11 tiles) and"
+      echo "Gemeinde Halle/Saale (51 tiles), ~0.1% of the state, NOT statewide coverage. The"
+      echo "full 3D-Messdaten product is priced and on request. See README, Sachsen-Anhalt."
       return ;;
   esac
   case "$3" in
