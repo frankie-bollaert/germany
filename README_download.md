@@ -487,15 +487,8 @@ footprints?** Footprint sources are detailed in
 
 <img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, HH, SH, ST) for no bulk LiDAR endpoint, dark red (BW, NI) for no point cloud published" width="560">
 
-| ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
-|----|-------|-------------|------------|--------------------|------------------|
-| **BB** | Brandenburg | ✅ `download_bb_lidar.sh` | ✅ same | ✅ `download_alkis.sh bb` — NAS/Shape, 18 Landkreise | ✅ inside that same ALKIS package |
-| **BE** | Berlin | ✅ `download_be_lidar.sh` | ✅ same | ✅ `download_alkis.sh be flurstuecke` — WFS 2.0 | ✅ `… be gebaeude`; also an HK-DE-format ZIP |
-| **MV** | Mecklenburg-Vorpommern | ✅ `download_mv_lidar.sh` | ✅ same | ✅ `download_alkis.sh mv` — NAS, ~750 Gemeinden | ✅ that package, plus a dedicated HU Atom ZIP |
-| **NW** | Nordrhein-Westfalen | ✅ `download_nrw_lidar.sh` † | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |
-| **SN** | Sachsen | ✅ `download_sn_lidar.sh` | ✅ same | ✅ `download_alkis.sh sn` — NAS, one statewide ZIP | ✅ that package, plus standalone HU/HK ZIPs |
-| **TH** | Thüringen | ✅ `download_th_lidar.sh` | ✅ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK are CAPTCHA-gated) |
-| **SL** | Saarland | ✅ `download_sl_lidar.sh` | ◐ open in the same share, **not yet scripted** | ✅ `download_alkis.sh sl` — NAS/Shape, 7 Landkreise | ✅ inside that package (standalone HU is INSPIRE WFS only) |
+Both the seven and the nine that fall short are tabulated in
+[README.md §3](README.md#3-complete-coverage--all-four-datasets).
 
 Footprints are never a separate fetch in these seven: ALKIS carries `AX_Gebaeude`, so the
 parcel download brings them along. The extra products in the last column are convenience —
@@ -531,27 +524,16 @@ further to fetch however the request is made, even though `download_bw_lidar.sh`
 way, for the same reason.
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
-`bundeslaender.geojson`, so they follow the data rather than these tables. Regenerate all
+`bundeslaender.geojson`, so they follow the data rather than the README.md tables. Regenerate all
 three with `./coverage_map.py all` after any coverage change; the script writes both an `.svg`
 and a `.png` per map, same image either way, but only the vector one carries a per-state
 tooltip.
 
 ## Why the other nine fall short
 
-Same columns as above, so the gaps line up. ✅ available and scripted · ⚠️ open but no bulk
-endpoint found · ❌ not published as open data.
-
-| ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
-|----|-------|-------------|------------|--------------------|------------------|
-| **RP** | Rheinland-Pfalz | ✅ `download_rlp_lidar.sh` † | ✅ same | ❌ **raster only** — `lika` GeoTIFF Liegenschaftskarte; vector geometry only per-query via the Flurstückssuche WFS | ✅ `download_alkis.sh rp hu` — ZIP + `.meta4`, HK the same way |
-| **BY** | Bayern | ✅ `download_by_lidar.sh` | ✅ same | ❌ **raster only** — ALKIS-Parzellarkarte; vector parcels sold through GeodatenOnline | ✅ `… by hausumringe` — Shape ×7 Bezirke, CC BY 4.0 (HK priced) |
-| **BW** | Baden-Württemberg | ❌ `3DM` flagged inactive, every URL 404s | ✅ `download_bw_lidar.sh` — ~125 GB | ✅ `download_alkis.sh bw` — NAS/Shape, ~3,380 Gemarkungen | ✅ inside that package; also standalone HU + HK ZIPs |
-| **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
-| **ST** | Sachsen-Anhalt | ◐ `download_st_lidar.sh` — 2 sample areas (62 tiles); statewide is priced/on request | ⚠️ free, but the UI caps a selection at 5 tiles | ✅ `download_alkis.sh st` — vereinfacht WFS, ~2.7 M parcels | ✅ `… st gebaeude` (~1.7 M); also a direct HU ZIP |
-| **SH** | Schleswig-Holstein | ❌ none in the open-data catalogue | ⚠️ `gaialight` app returns an empty FeatureCollection | ⚠️ `download_alkis.sh sh` fetches the **Flur index** (~243 MB); the NAS is behind its `LINK_DATA` links | ⚠️ HU/HK only through the interactive download client |
-| **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
-| **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
-| **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
+The nine are the rest of the table in
+[README.md §3](README.md#3-complete-coverage--all-four-datasets) — same columns as the seven,
+so the gaps line up against them.
 
 Every one of the nine has open, scriptable **parcels**. The gaps cluster: RP and BY are a
 single content gap each — a rasterised cadastre, with everything else in place. BW and NI
@@ -595,29 +577,8 @@ ST stays orange despite having a downloader: the map is about fetching a *state*
 what Sachsen-Anhalt gives away anonymously is two sample areas — the statewide point cloud is
 still portal-and-invoice only. See [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
 
-Legend below: ✅ available and scripted · ◐ scripted, but the open data is sample areas rather
-than the state · ⚠️ open but no bulk endpoint found · ❌ not published.
-
-| ID | State | Point cloud | DTM (DGM1) | Bulk downloader | CRS | Licence |
-|----|-------|:-----------:|:----------:|-----------------|-----|---------|
-| **BW** | Baden-Württemberg | ❌ | ✅ | `download_bw_lidar.sh` | 25832 | DL-DE/BY 2.0 |
-| **BY** | Bayern | ✅ | ✅ | `download_by_lidar.sh` | 25832 | DL-DE/BY 2.0 |
-| **BE** | Berlin | ✅ | ✅ | `download_be_lidar.sh` | 25833 | DL-DE/Zero 2.0 |
-| **BB** | Brandenburg | ✅ | ✅ | `download_bb_lidar.sh` | 25833 | DL-DE/BY 2.0 |
-| **HB** | Bremen | ⚠️ | ⚠️ | — | — | — |
-| **HH** | Hamburg | ❌ | ⚠️ | — | 25832 | open (Transparenzportal) |
-| **HE** | Hessen | ⚠️ | ⚠️ | — | 25832 | open, no conditions (since 2022) |
-| **MV** | Mecklenburg-Vorpommern | ✅ | ✅ | `download_mv_lidar.sh` | 25833 | open, attribution required |
-| **NI** | Niedersachsen | ❌ | ✅ | `download_ni_lidar.sh` | 25832 | CC BY 4.0 |
-| **NW** | Nordrhein-Westfalen | ✅ | ✅ | `download_nrw_lidar.sh` † | 25832 | DL-DE/Zero 2.0 |
-| **RP** | Rheinland-Pfalz | ✅ | ✅ | `download_rlp_lidar.sh` † | 25832 | DL-DE/BY 2.0 |
-| **SL** | Saarland | ✅ | ◐ | `download_sl_lidar.sh` (`las`) | 25832 | DL-DE/BY 2.0 |
-| **SN** | Sachsen | ✅ | ✅ | `download_sn_lidar.sh` | 25833 | DL-DE/Zero 2.0 |
-| **ST** | Sachsen-Anhalt | ◐ | ⚠️ | `download_st_lidar.sh` (`las`, samples only) | 25832 | DL-DE/BY 2.0 (since 2023) |
-| **SH** | Schleswig-Holstein | ❌ | ⚠️ | — | 25832 | open |
-| **TH** | Thüringen | ✅ | ✅ | `download_th_lidar.sh` (`las`, `dgm1`, `dom1`) | 25832 | DL-DE/BY 2.0 |
-
-† The two script filenames that do not match their ID — see [The state ID](#the-state-id).
+The per-state table — products, downloader, CRS and licence — is
+[README.md §1](README.md#1-lidar--terrain-availability).
 
 **11 of 16 states are scripted statewide** — 299,034 km², 84% of Germany's land area by the
 figures in [The 16 Bundesländer](#the-16-bundesländer), and well over 12 TB of point cloud
@@ -843,27 +804,9 @@ Fourteen states are green. The two orange ones are not a delivery problem — BY
 their cadastre as **raster**, so the download works fine and parcel geometry simply is not in
 what arrives. **No state is fully closed.**
 
-**"Login"** below means a user account is needed to get the data; **"anonymous"** means plain
-HTTP with no credentials.
-
-| ID | State | ALKIS as open data | Download | How | Format · unit | License |
-|----|-------|--------------------|----------|-----|---------------|---------|
-| **BW** | Baden-Württemberg | ✅ full (oE) | **anonymous** | vector-tile grid → ZIP | NAS, Shape · Gemarkung (~3,400) | DL-DE/BY 2.0 |
-| **BY** | Bayern | ⚠️ **partial** | **anonymous** | static ZIP / GPKG | no vector Flurstücke — see below | CC BY 4.0 |
-| **BE** | Berlin | ✅ full (oE) | **anonymous** | WFS 2.0 only | GML · statewide (~403k parcels) | DL-DE/Zero 2.0 |
-| **BB** | Brandenburg | ✅ full (oE) | **anonymous** | directory listing | NAS, Shape · Landkreis (18) | DL-DE/BY 2.0 |
-| **HB** | Bremen | ✅ full (oE) | **anonymous** | WFS 1.1 only | GML · statewide | CC BY 4.0 |
-| **HH** | Hamburg | ✅ "ausgewählte Daten" | **anonymous** | CKAN API → ZIP | GML · statewide, quarterly | DL-DE/BY 2.0 |
-| **HE** | Hessen | ✅ full (oE) | **anonymous** via API<br>**login** for file packages | OGC API Features / WFS | GeoJSON, GML · statewide (~5.0 M parcels) | DL-DE/Zero 2.0 |
-| **MV** | Mecklenburg-Vorpommern | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | NAS · Gemeinde (~750) | CC BY 4.0 |
-| **NI** | Niedersachsen | ✅ full (oE) | **anonymous** | WFS 2.0 (NAS) only | GML · statewide (~6.3 M parcels) | DL-DE/BY 2.0 |
-| **NW** | Nordrhein-Westfalen | ✅ full (oE) | **anonymous** | XML index → ZIP | NAS, simplified GPKG · Kreis (53) | DL-DE/Zero 2.0 |
-| **RP** | Rheinland-Pfalz | ⚠️ **raster only** | **anonymous** | Metalink-4 | GeoTIFF cadastral map · 1 km tile | DL-DE/BY 2.0 |
-| **SL** | Saarland | ✅ full (oE) | **anonymous** | public WebDAV share | NAS, Shape · Landkreis (7) | DL-DE/BY 2.0 |
-| **SN** | Sachsen | ✅ full (oE) | **anonymous** | single ZIP | NAS · statewide | DL-DE/BY 2.0 |
-| **ST** | Sachsen-Anhalt | ✅ vereinfacht (oE) | **anonymous** | WFS 2.0 only | GML · statewide (~2.7 M parcels) | DL-DE/BY 2.0 |
-| **SH** | Schleswig-Holstein | ✅ full (oE), but two-step | **anonymous** | index file → per-Flur NAS | GeoJSON index (~243 MB) → `.xml.gz` per Flur | CC BY 4.0 |
-| **TH** | Thüringen | ✅ full (oE) | **anonymous** | INSPIRE ATOM feed | Shape, NAS · Flur (~16,500) | DL-DE/BY 2.0 |
+The per-state table — openness, access route, format, unit and licence — is
+[README.md §2](README.md#2-alkis--cadastre-availability). There, **"login"** means a user
+account is needed to get the data and **"anonymous"** means plain HTTP with no credentials.
 
 ## What each state gives you
 
@@ -878,7 +821,7 @@ What `download_alkis.sh` actually fetches, per state:
 | `hb` | Bremen | `flurstuecke` | one GetFeature | small |
 | `hh` | Hamburg | `gml` | statewide, quarterly | ~0.46 GB |
 | `he` | Hessen | `flurstuecke`, `zoning` | OGC API pages | ~5.0 M parcels |
-| `mv` | Mecklenburg-Vorpommern | `nas` | Gemeinde (~1,450 files) | — |
+| `mv` | Mecklenburg-Vorpommern | `nas` | Gemeinde (724 → 1,448 files) | — |
 | `ni` | Niedersachsen | `flurstueck`, `gebaeude` | WFS pages | ~6.3 M parcels |
 | `nw` | Nordrhein-Westfalen | `nas`, `gpkg` | Kreis (53) | ~25 GB |
 | `rp` | Rheinland-Pfalz | `lika`, `hu` | `lika` 1 km tile (20,511) / `hu` statewide (1 zip) | ~31 GB / 334 MB |
@@ -1012,8 +955,8 @@ All ALKIS data above is in **ETRS89 / UTM** (EPSG:25832, EPSG:25833 in the east)
 # The state ID
 
 **The ID is the ISO 3166-2 code without the `DE-` prefix.** It is the only state identifier
-this repo uses, and it is the same string everywhere — every table above, both generated maps,
-and all machine-readable data:
+this repo uses, and it is the same string everywhere — every table in these two documents, all
+three generated maps, and all machine-readable data:
 
 | Where | Form | Example |
 |-------|------|---------|
