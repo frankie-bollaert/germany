@@ -7,7 +7,7 @@ found, not because the data is gated.
 
 | Data | Downloader | Coverage |
 |------|------------|----------|
-| **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 10 of 16 states statewide, + ST sample areas |
+| **LiDAR / terrain** | `download_<id>_lidar.sh` (`las`, `dgm1`) | 11 of 16 states statewide, + ST sample areas |
 | **ALKIS (cadastre)** | `download_alkis.sh <id>` | 16 of 16 states |
 | **All of the above at once** | `download_all.sh` | [Downloading everything](#downloading-everything) |
 | **ALKIS → DuckDB tables** | `alkis_to_duckdb.sh` | [Loading ALKIS into DuckDB](#loading-alkis-into-duckdb) |
@@ -437,6 +437,7 @@ What a `both` run actually plans, verified live 2026-07-29:
 | RP St. Goarshausen | refused | refused | no `BBOX` support at all |
 | ST Wernigerode | — | **0** | no open dgm1; the square is outside both open LAZ areas |
 | TH Eisenach | 25 tiles | 9 tiles (~1.3 GB) | 1 km grid like NW; newest of three vintages unless `VINTAGE=` |
+| SL Mettlach | — | 9 tiles (~0.4 GB) | `dgm1` is published but not wired into the script; `las` is cut out of the district ZIPs |
 
 The five states with no LiDAR downloader (HB, HH, HE, SL, SH) are skipped with a
 reason. ST has one, but its square (Wernigerode) sits outside both areas Sachsen-Anhalt
@@ -482,9 +483,9 @@ Sections 2 and 3 each answer one dataset at a time. This one answers the crossin
 footprints?** Footprint sources are detailed in
 [`cadastre-products.md`](cadastre-products.md#3-open-data-equivalents-per-bundesland).
 
-**Six states: BB, BE, MV, NW, SN, TH.**
+**Seven states: BB, BE, MV, NW, SN, TH, SL.**
 
-<img src="coverage_map.png" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, TH) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, SL, ST) for no bulk LiDAR" width="560">
+<img src="coverage_map.png" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BW, BY, NI, RP) for one missing, red (HB, HE, HH, SH, ST) for no bulk LiDAR" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
@@ -494,8 +495,9 @@ footprints?** Footprint sources are detailed in
 | **NW** | Nordrhein-Westfalen | ✅ `download_nrw_lidar.sh` † | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |
 | **SN** | Sachsen | ✅ `download_sn_lidar.sh` | ✅ same | ✅ `download_alkis.sh sn` — NAS, one statewide ZIP | ✅ that package, plus standalone HU/HK ZIPs |
 | **TH** | Thüringen | ✅ `download_th_lidar.sh` | ✅ same | ✅ `download_alkis.sh th` — Shape/NAS per Flur (~16,500) | ✅ inside that package (standalone HU/HK are CAPTCHA-gated) |
+| **SL** | Saarland | ✅ `download_sl_lidar.sh` | ◐ open in the same share, **not yet scripted** | ✅ `download_alkis.sh sl` — NAS/Shape, 7 Landkreise | ✅ inside that package (standalone HU is INSPIRE WFS only) |
 
-Footprints are never a separate fetch in these six: ALKIS carries `AX_Gebaeude`, so the
+Footprints are never a separate fetch in these seven: ALKIS carries `AX_Gebaeude`, so the
 parcel download brings them along. The extra products in the last column are convenience —
 smaller, simpler files than a full NAS package for anyone who wants only footprints.
 
@@ -506,6 +508,12 @@ blocker — see [Thüringen](#thüringen-three-atom-feeds-behind-a-portal). Its 
 also been counted as unscriptable because the *standalone* Hausumringe product is
 CAPTCHA-gated; they ship inside the ALKIS package, which is the same route that already
 counted for BB, SL, SH and HH.
+
+**SL joined on the same day, with one asterisk.** All four datasets are open and anonymously
+downloadable, which is what the map colours by — but `download_sl_lidar.sh` fetches the point
+cloud only, so the repo can currently script three of SL's four. Its DGM1 sits in the same
+share, in the same packaging, and wiring it in is one folder name. See
+[Saarland](#saarland-the-share-the-repo-was-already-reading).
 
 Picking between them: **NW** is the strongest — every product carries a machine-readable
 index, and DL-DE/Zero 2.0 means no attribution obligation. **BE** is the fastest to fetch
@@ -519,7 +527,7 @@ This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) 
 three with `./coverage_map.py all` after any coverage change; each also has an `.svg` beside
 its `.png`, same image as vector, with a per-state tooltip the PNG cannot carry.
 
-## Why the other ten fall short
+## Why the other nine fall short
 
 Same columns as above, so the gaps line up. ✅ available and scripted · ⚠️ open but no bulk
 endpoint found · ❌ not published as open data.
@@ -535,13 +543,12 @@ endpoint found · ❌ not published as open data.
 | **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **HH** | Hamburg | ❌ no point cloud found | ⚠️ published, but `daten-hamburg.de` 403s directory listings | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
 | **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
-| **SL** | Saarland | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh sl` — NAS/Shape, 7 Landkreise | ✅ inside that package (standalone HU is INSPIRE WFS only) |
 
-Every one of the ten has open, scriptable **parcels**. The gaps cluster: RP and BY are a
+Every one of the nine has open, scriptable **parcels**. The gaps cluster: RP and BY are a
 single content gap each — a rasterised cadastre, with everything else in place. BW and NI
 publish no point cloud at all, so there is nothing further to fetch however you ask. The
-remaining six fail on elevation delivery — portals, CAPTCHAs and order clients, not access
-restrictions — and four of them (SH, HE, HH, HB) additionally have no scriptable standalone
+remaining five fail on elevation delivery — portals, CAPTCHAs and order clients, not access
+restrictions — and all four of them (SH, HE, HH, HB) additionally have no scriptable standalone
 footprint product.
 
 ## Fetching all four today
@@ -549,7 +556,7 @@ footprint product.
 Whole-state, `download_all.sh` covers it — `ONLY=<id> ./download_all.sh all` fetches every
 dataset that state publishes. What has no single command is a *sample*: `download_samples.sh`
 drives only the LiDAR side, because `download_alkis.sh` has no `BBOX` support, so parcels and
-footprints stay per-state or per-package until that lands. For one of the six states:
+footprints stay per-state or per-package until that lands. For one of the seven states:
 
 ```bash
 ONLY=<id> ./download_all.sh all                 # all four datasets, statewide volumes
@@ -566,10 +573,12 @@ ONLY=<id> ./download_all.sh all                 # all four datasets, statewide v
 The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
 whether you have to click through an interactive portal.
 
-<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SN, TH) for point cloud plus terrain, orange (HB, HE, HH, SH, SL, ST) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
+<img src="lidar_map.png" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, HH, SH, ST) for open data with no bulk endpoint, red (BW, NI) for terrain only" width="560">
 
-Green is the eight states with both products scripted. Orange is the six that publish
-elevation openly but only through a portal — everything is there, just not scriptably. Red is
+Green is the nine states whose elevation a script reaches — eight with both products
+scripted, plus SL, where the point cloud is scripted and the terrain is open in the same
+share but not yet wired in. Orange is the five that publish elevation openly but only
+through a portal — everything is there, just not scriptably. Red is
 BW and NI, which are scripted and working but publish **no point cloud at all**, so there is
 nothing further to fetch however you ask. Regenerate with `./coverage_map.py lidar`.
 
@@ -593,7 +602,7 @@ than the state · ⚠️ open but no bulk endpoint found · ❌ not published.
 | **NI** | Niedersachsen | ❌ | ✅ | `download_ni_lidar.sh` | 25832 | CC BY 4.0 |
 | **NW** | Nordrhein-Westfalen | ✅ | ✅ | `download_nrw_lidar.sh` † | 25832 | DL-DE/Zero 2.0 |
 | **RP** | Rheinland-Pfalz | ✅ | ✅ | `download_rlp_lidar.sh` † | 25832 | DL-DE/BY 2.0 |
-| **SL** | Saarland | ⚠️ | ⚠️ | — | — | — |
+| **SL** | Saarland | ✅ | ◐ | `download_sl_lidar.sh` (`las`) | 25832 | DL-DE/BY 2.0 |
 | **SN** | Sachsen | ✅ | ✅ | `download_sn_lidar.sh` | 25833 | DL-DE/Zero 2.0 |
 | **ST** | Sachsen-Anhalt | ◐ | ⚠️ | `download_st_lidar.sh` (`las`, samples only) | 25832 | DL-DE/BY 2.0 (since 2023) |
 | **SH** | Schleswig-Holstein | ❌ | ⚠️ | — | 25832 | open |
@@ -601,12 +610,13 @@ than the state · ⚠️ open but no bulk endpoint found · ❌ not published.
 
 † The two script filenames that do not match their ID — see [The state ID](#the-state-id).
 
-**10 of 16 states are scripted statewide** — 296,463 km², 83% of Germany's land area by the
+**11 of 16 states are scripted statewide** — 299,034 km², 84% of Germany's land area by the
 figures in [The 16 Bundesländer](#the-16-bundesländer), and well over 12 TB of point cloud
-between them. ST adds an eleventh downloader, but
+between them. ST adds a twelfth downloader, but
 only for the two sample areas it publishes openly (see
-[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)), so it is not counted in the ten and
-stays orange on the map above.
+[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)), so it is not counted in the eleven
+and stays orange on the map above. SL is counted, with a caveat: its point cloud is scripted,
+its terrain is open in the same share but not yet wired in — hence ◐ in the DTM column.
 
 ## Volumes for the scripted states
 
@@ -622,6 +632,7 @@ stays orange on the map above.
 | **SN** | Sachsen | 4,981 tiles (2 km) | 4,981 tiles (2 km) |
 | **BW** | Baden-Württemberg | ❌ none published | 9,370 zips (2 km), ~125 GB |
 | **TH** | Thüringen | 16,945 tiles (1 km), ~1.52 TB | 16,945 tiles (1 km), ~127 GB |
+| **SL** | Saarland | 3,076 tiles (1 km), 124 GB | published, ~5.1 GB — not scripted |
 | **ST** | Sachsen-Anhalt | 62 tiles (2 km), 20.4 GB — **two sample areas only** | ❌ no bulk endpoint |
 
 TH's figures are for the newest of its three vintages; all three together are ~2.9 TB of
@@ -680,10 +691,66 @@ holds a `.laz` plus a `.meta` sidecar, `dgm1`/`dom1` hold `.tif` + `.xyz` + `.me
 accuracy per tile. No checksums are published, so downloads are resumable and size-checked,
 not hash-verified.
 
+## Saarland: the share the repo was already reading
+
+Saarland's whole 2025 airborne laser scan is open — 3,076 tiles, 124 GB of classified LAZ,
+six of six Landkreise — and it has been sitting in a folder next to one this repo opens on
+every `download_alkis.sh sl` run. LVGL publishes its statewide open data through a
+password-less Nextcloud share; `plan_sl()` reads `OD_ALKIS_nas_LK` out of it. One PROPFIND
+level up are eighteen folders, including:
+
+| Folder | Contents | Size |
+|--------|----------|------|
+| `OD_LIDAR_Punktwolke_2025_laz_LK` | **classified point cloud, `.laz`** | **115.7 GB** |
+| `OD_DGM1_2025_tif_LK` · `…_laz_LK` | terrain, GeoTIFF · LAZ | 5.1 GB · 2.0 GB |
+| `OD_DOM1_2025_tif_LK` · `…_laz_LK` | surface model | 5.7 GB · 2.8 GB |
+| `OD_TrueDOP20_2025_tif_LK` | true orthophotos, 20 cm | 217.3 GB |
+| `OD_Gebäudemodelle_LoD2_gml_LK` | LoD2 building models | 1.2 GB |
+
+The README said "no open LiDAR bulk product identified" for SL until 2026-08-03. It was never
+a delivery problem — nobody listed the share.
+
+Licence is **DL-DE/BY 2.0**, and LVGL states the source note verbatim:
+`© GeoBasis DE/LVGL-SL (Jahr der Bereitstellung)`.
+
+The point cloud is one ZIP per district, 12.5–26.2 GB each, on a 1 km grid spanning
+E 308–384 / N 5441–5500 (UTM32):
+
+| `KREISE=` | District | Tiles | Archive |
+|-----------|----------|-------|---------|
+| `MZG` | Merzig-Wadern | 649 | 26.2 GB |
+| `NK` | Neunkirchen | 310 | 12.5 GB |
+| `SB` | Regionalverband Saarbrücken | 499 | 20.6 GB |
+| `SLS` | Saarlouis | 547 | 21.6 GB |
+| `SPK` | Saarpfalz-Kreis | 509 | 20.6 GB |
+| `WND` | St. Wendel | 562 | 22.7 GB |
+
+Nextcloud's public WebDAV endpoint serves those archives anonymously **and honours Range**, so
+`download_sl_lidar.sh` never downloads one whole: it reads each ZIP's central directory over
+ranges, then range-fetches and inflates only the tiles selected, straight to `.laz` — the same
+technique as [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state). A tile is ~38 MB, 4 M
+points, 4 pts/m², classified, with Intensity and GPS time.
+
+```bash
+./download_sl_lidar.sh las ../germany-data/sl_lidar    # all six districts, 124 GB
+KREISE=NK ./download_sl_lidar.sh                       # one district, 12.5 GB
+DRY_RUN=1 ./download_sl_lidar.sh                       # plan the 3,076 tiles, fetch nothing
+BBOX="321,5485,323,5487" ./download_sl_lidar.sh        # the repo's Mettlach square, 9 tiles
+```
+
+Two things this script does *not* do. It covers `las` only — DGM1 and DOM1 are in the same
+share in the same packaging, so wiring them in is one folder name each, but until that happens
+`download_samples.sh` reports `download_sl_lidar.sh does not offer dgm1` for the SL square. And
+it discovers the share token by following the `/cloud/freiegeobasisdaten` alias, whereas
+`download_alkis.sh` still has that token hard-coded — worth unifying, since a re-share would
+break the ALKIS side silently. Note the alias redirects to an **`http://`** URL and the site's
+http→https rule drops the path, so the token has to be read from the first `Location` header,
+not from the end of the redirect chain.
+
 ## Sachsen-Anhalt: samples, not a state
 
 Sachsen-Anhalt is the one state where a downloader exists but the coverage does not. It is
-listed apart from the ten because treating it as "scripted" would overstate what you get.
+listed apart from the eleven because treating it as "scripted" would overstate what you get.
 
 LVermGeo publishes the statewide point cloud (`3D-Messdaten`, ALS, 4–8 pts/m², classified,
 LAS 1.2 / PDRF 3) as a **priced, application-only product** — 190 € per Datensatz, "auf
@@ -716,17 +783,19 @@ BBOX="658,5746,662,5750" AREAS=hakel ./download_st_lidar.sh
 repo's ST sample square (Wernigerode) falls in neither area, so `download_samples.sh` plans
 **0 tiles** for ST and says so — that is a real coverage gap, not a broken downloader.
 
-## The other five states
+## The other four states
 
 These are **also open data** — none of them puts the LiDAR behind a login — but no anonymous
 *bulk* endpoint was verified, so there is no script. The blocker is delivery mechanics, not
 access rights.
 
-Thüringen sat in this table until 2026-08-03 on the strength of its `gaialight` app alone.
-Three INSPIRE Atom feeds were linked from the very page that was tried, and nobody followed
-them — so before trusting a "no bulk endpoint" verdict below, check whether the state
-publishes an Atom/INSPIRE service under `…/dienste/` that was never opened. SH runs the same
-`gaialight` app and is the obvious place to look next.
+Two states left this table on 2026-08-03, and neither had changed what it publishes — only
+what had been looked at. TH's three INSPIRE Atom feeds were linked from the very page that was
+tried. SL's point cloud was in the Nextcloud share this repo *already reads for ALKIS*, one
+folder along from the one it was opening. So treat every "no bulk endpoint" verdict below as
+unproven until someone has checked for an Atom/INSPIRE service under `…/dienste/` and listed
+every folder of any share the state already exposes. SH runs the same `gaialight` app as TH
+and is the obvious place to look next.
 
 | ID | State | Status | What blocks a script |
 |----|-------|--------|----------------------|
@@ -734,7 +803,6 @@ publishes an Atom/INSPIRE service under `…/dienste/` that was never opened. SH
 | **HE** | Hessen | Open since 2022-02-01, no usage conditions. DGM1 free in the Downloadcenter. | Delivery through an Intershop storefront (`gds.hessen.de`); no static index or feed found. |
 | **HH** | Hamburg | Open via the Transparenzportal. DGM1 published; no point cloud found. | `daten-hamburg.de` returns 403 on directory listings, so tiles can only be reached by exact known URL. |
 | **HB** | Bremen | No open LiDAR bulk product identified. | — |
-| **SL** | Saarland | No open LiDAR bulk product identified. | — |
 
 If you need one of these, the practical route today is the state's interactive portal.
 
@@ -742,7 +810,7 @@ If you need one of these, the practical route today is the state's interactive p
 
 This matters when mosaicking across state borders:
 
-- **EPSG:25832** (UTM 32N): BW, BY, HE, NI, NW, RP, SH, ST, TH — and HH.
+- **EPSG:25832** (UTM 32N): BW, BY, HE, NI, NW, RP, SH, SL, ST, TH — and HH.
 - **EPSG:25833** (UTM 33N): BB, BE, MV, SN.
 
 Within a zone all states share the same grid origin (SW corner snapped to whole km), so tiles
@@ -922,7 +990,8 @@ Two portals do sit behind a login, but neither is the only route to their state'
   content anonymously, so the downloader uses that instead.
 - **Saarland** — `shop.lvgl.saarland.de` is a webshop with accounts, but LVGL also mirrors
   the statewide open datasets on a **password-less public Nextcloud share**, which is what
-  the downloader reads.
+  the downloader reads. That same share also holds the state's LiDAR, orthophotos and LoD2
+  building models — see [Saarland](#saarland-the-share-the-repo-was-already-reading).
 
 Five states publish **services only** — no file packages exist, so a bulk copy means paging
 a WFS or OGC API (`download_alkis.sh` does this automatically): BE, HB, NI, HE, ST.
@@ -954,13 +1023,13 @@ directories (`rlp_lidar/`) and the converter's output tree (`dtm/de/rlp/`, `poin
 finds `download_nrw_lidar.sh`. Renaming them would break every existing invocation and output
 path, so they stay as they are — but nothing new should use `nrw` or `rlp`.
 
-# How the eleven LiDAR downloaders are built
+# How the twelve LiDAR downloaders are built
 
 There is no common German standard, so each script reverse-engineers its state's own
 publishing mechanism. What they share: **the tile list is never cached** — it is rebuilt from
 the authoritative source on every run — and every transfer is parallel and resumable. Ten go
-through `aria2c`; ST is the exception, because its tiles live inside two big ZIPs and it
-range-reads them itself.
+through `aria2c`; ST and SL are the exceptions, because their tiles live inside big ZIPs and
+they range-read them themselves.
 
 | Mechanism | States | Integrity |
 |-----------|--------|-----------|
@@ -972,12 +1041,12 @@ range-reads them itself.
 | Nextcloud public WebDAV share + inventory embedded in the portal's JS | SN | size only |
 | Mapbox vector-tile download grid | BW | size only |
 | Polygon-to-Metalink service, swept in 1600 km² blocks | BY (`las`) | size only |
-| ZIP central directory read over HTTP ranges, tiles inflated individually | ST | size only |
+| ZIP central directory read over HTTP ranges, tiles inflated individually | ST, SL | size only |
 
 Only RP and Bayern's `dgm1` publish checksums. Everywhere else `--continue` resumes and
 sizes are checked, but content is not hash-verified.
 
-All eleven share the same CLI:
+All twelve share the same CLI:
 
 ```bash
 ./download_<id>_lidar.sh [dgm1|las|both] [output_dir]
@@ -987,9 +1056,10 @@ JOBS=12 CONN=4 ./download_xx_lidar.sh dgm1
 BBOX="minE,minN,maxE,maxN" ./…            # UTM km subset (NI takes WGS84 degrees instead)
 ```
 
-Two take an extra selector, because their source publishes more than one of the same thing:
-`AREAS=` picks ST's sample areas, `VINTAGE=` picks one of TH's three flight campaigns
-(newest by default). TH also offers a third dataset, `dom1`, which no other state does.
+Three take an extra selector, because their source publishes more than one of the same
+thing: `AREAS=` picks ST's sample areas, `KREISE=` picks SL's district archives, and
+`VINTAGE=` picks one of TH's three flight campaigns (newest by default). TH also offers a
+third dataset, `dom1`, which no other state does.
 
 > **Mind the CRS.** BB, BE, MV and SN are UTM **zone 33** (EPSG:25833); the rest are zone 32
 > (EPSG:25832). Tiles from the two groups do not share a grid, so a `BBOX` is only meaningful
@@ -1117,7 +1187,7 @@ Tiles are addressable directly too: `https://geodaten.bayern.de/odd_data/laser/6
 Published by **Geobasis NRW**. License **DL-DE/Zero 2.0** — no attribution obligation.
 EPSG:25832, 1 km tiles, 35,860 tiles per product.
 
-NW is the cleanest source of the eleven: each product directory carries an `index.json`
+NW is the cleanest source of the twelve: each product directory carries an `index.json`
 listing every file with its byte size and timestamp.
 
 - `las` = `3dm_l_las` (3D-Messdaten Laserscanning, `.laz`) — **3.49 TB**
@@ -1499,6 +1569,17 @@ repo's coverage as feature properties.
 - The `gaialight` app that is *not* the bulk route: <https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/dl-dhm.html>
   · it also links the feeds above, and offers `dgm25_landesweit_th.zip` as a single statewide file
 - Per-vintage coverage indexes: `…/hoehendaten/Uebersichten/Stand_<vintage>.zip`, product descriptions `…/README_Hoehendaten_<vintage>.pdf`
+
+**SL**
+
+- Open Data terms and product list: <https://www.shop.lvgl.saarland.de/index.php?option=com_content&view=article&id=18>
+  · licence DL-DE/BY 2.0, source note `© GeoBasis DE/LVGL-SL (Jahr der Bereitstellung)`
+- The share holding every statewide open dataset: <https://www.shop.lvgl.saarland.de/cloud/freiegeobasisdaten>
+  → redirects to `/cloud/index.php/s/<token>`; public WebDAV at `/cloud/public.php/dav/files/<token>/`
+- Point cloud folder: `OD_LIDAR_Punktwolke_2025_laz_LK`, one ZIP per Landkreis, plus a
+  `Kachelübersicht-Airborne Laserscanning 2025.pdf` tile index
+- The GovData entry for the 2016 DGM1 still answers with an "order it on a disk" note — that
+  predates the 2025 campaign and is not the current route
 
 **States without a LiDAR script** (starting points if you want to add one)
 
