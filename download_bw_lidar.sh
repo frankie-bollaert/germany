@@ -12,7 +12,8 @@
 # Datasets (verified live):
 #   dgm1 — bare-earth terrain model, 1 m grid, ASCII **XYZ** text inside the ZIP
 #          (one line per cell centre: easting northing height), plus a per-tile .csv
-#          with acquisition date/accuracy. Statewide: ~9,370 ZIPs, ~134 GB.
+#          with acquisition date/accuracy. Statewide: ~9,370 ZIPs, ~125 GB (BW publishes no
+#          sizes; this is DRY_RUN=1's extrapolation from sampled tiles, so treat it as ±10%).
 #
 # NOT available: BW publishes no open point cloud. The portal's 3DM / "Laserscandaten"
 # product is flagged inactive and every 3dm_*.zip URL returns 404, so there is no BW
@@ -26,7 +27,7 @@
 #           and size-checked but not hash-verified.
 #
 # Usage   : ./download_bw_lidar.sh [dgm1] [output_dir]
-#   ./download_bw_lidar.sh dgm1                  # ~134 GB into ./bw_lidar/dgm1
+#   ./download_bw_lidar.sh dgm1                  # ~125 GB into ./bw_lidar/dgm1
 #   ./download_bw_lidar.sh dgm1 /mnt/big/bw      # mind your disk!
 #
 # Env vars (override defaults):

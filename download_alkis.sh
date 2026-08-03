@@ -92,14 +92,14 @@ bb     nas, shape                    full ALKIS oE, one zip per Landkreis (18)
 hb     flurstuecke                   WFS 1.1 dump, single GML
 hh     gml                           newest quarterly "ausgewählte Daten" zip
 he     flurstuecke, zoning           OGC API Features dump, paged GeoJSON
-mv     nas                           full ALKIS oE, one zip per Gemeinde (~750)
+mv     nas                           full ALKIS oE, NAS + Shape per Gemeinde (724)
 ni     flurstueck, gebaeude          WFS 2.0 NAS dump, paged GML
 nw     nas, gpkg                     full ALKIS oE, one zip per Kreis (53)
 rp     lika, hu                      raster cadastral map / Hausumringe (no vector ALKIS)
 sl     nas, shape                    full ALKIS oE, one zip per Landkreis (7)
 sn     nas                           full ALKIS oE, one statewide zip
 sh     geojson                       Flur INDEX (~243 MB) — links to the NAS, not the NAS
-th     shape, nas                    full ALKIS oE, one zip per Flur (~9k)
+th     shape, nas                    full ALKIS oE, one zip per Flur (~16.5k)
 st     flurstueck, gebaeude,         ALKIS-vereinfacht WFS, statewide (~2.7 M parcels)
        nutzung
 EOF
