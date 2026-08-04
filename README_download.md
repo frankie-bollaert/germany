@@ -485,7 +485,7 @@ footprints?** Footprint sources are detailed in
 
 **Seven states: BB, BE, MV, NW, SN, TH, SL.**
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, ST) for no bulk LiDAR endpoint, dark red (BW, HH, NI, SH) for no point cloud published" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, HE, RP) for one missing, light red (HB, ST) for no bulk LiDAR route, dark red (BW, HH, NI, SH) for no point cloud published" width="560">
 
 Both the seven and the nine that fall short are tabulated in
 [README.md §3](README.md#3-complete-coverage--all-four-datasets).
@@ -516,13 +516,17 @@ its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,
 grid, released campaign by campaign.
 
 The map carries **two shades of red**, because the two ways of ending up without elevation are
-not the same problem. Light red (HB, HE, ST) is a delivery gap: the products exist and are
-open, but no bulk endpoint hands them over, so these states move up the day one appears — with
-the caveat that Hessen's point cloud has no online delivery to fix, only
-[a hard disk in the post](#hessen-a-hard-disk-in-the-post). Dark red (BW, HH, NI, SH) is a
-source gap — none of them publishes a point cloud at all, so there is nothing further to fetch
-however the request is made, even though all four have working DGM1 downloaders. The LiDAR map
-below ranks them the same way, for the same reason.
+not the same problem. Light red (HB, ST) is a delivery gap: the products exist and are open,
+but nothing hands them over whole, so these states move up the day a route appears. Dark red
+(BW, HH, NI, SH) is a source gap — none of them publishes a point cloud at all, so there is
+nothing further to obtain however the request is made, even though all four have working DGM1
+downloaders. The LiDAR map below ranks them the same way, for the same reason.
+
+**HE left light red on 2026-08-04 without anyone writing code**, which is what "a route
+appears" looks like in practice: HVBG will copy the statewide laser scan onto a hard disk you
+post them, so Hessen's elevation is now obtainable in full and only its footprints are missing
+— an orange state, one dataset short. It carries a `*` on the map because none of that comes
+through an endpoint. See [Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
 `bundeslaender.geojson`, so they follow the data rather than the README.md tables. Regenerate all
@@ -537,11 +541,13 @@ The nine are the rest of the table in
 so the gaps line up against them.
 
 Every one of the nine has open, scriptable **parcels**. The gaps cluster: RP and BY are a
-single content gap each — a rasterised cadastre, with everything else in place. BW, HH, NI and
-SH publish no point cloud at all, so there is nothing further to fetch however you ask. The
-remaining three fail on elevation delivery — portals, order clients and, in Hessen's case, the
-post, not access restrictions. HB, HE, HH and SH additionally have no scriptable standalone
-footprint product.
+single content gap each — a rasterised cadastre, with everything else in place. HE is a third
+single-gap state, and the odd one out, because its missing dataset is footprints rather than
+elevation: the Downloadcenter's Hausumringe needs a free account, while its point cloud and
+DGM1 are both obtainable in full. BW, HH, NI and SH publish no point cloud at all, so there is
+nothing further to obtain however you ask. That leaves HB and ST failing on elevation delivery
+— no identified bulk product and sample-areas-only respectively, neither an access restriction.
+HB, HE, HH and SH additionally have no scriptable standalone footprint product.
 
 ## Fetching all four today
 
@@ -562,41 +568,44 @@ ONLY=<id> ./download_all.sh all                 # all four datasets, statewide v
 # 2. LiDAR / terrain availability
 
 **No state gates its LiDAR behind a login** — every one of the 16 publishes it as open data.
-The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
-whether you have to click through an interactive portal — or, for Hessen's point cloud, post
-a hard disk.
+The dividing line this map draws is whether the *whole state* can be obtained at all, by any
+route anyone here has walked: a script, or in Hessen's case a hard disk in the post.
 
-<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, ST) for open data with no bulk endpoint, red (BW, HH, NI, SH) for terrain only" width="560">
+<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, HE, MV, NW, RP, SL, SN, TH) for point cloud plus terrain obtainable in bulk, with HE starred because it arrives offline on a posted hard disk; orange (HB, ST) for open data not obtainable whole; red (BW, HH, NI, SH) for terrain only" width="560">
 
-Green is the nine states whose elevation a script reaches with both products. Orange is the
-three that publish elevation openly but not scriptably — everything is there, just not through
-an endpoint. Red is BW, HH, NI and SH, which are scripted and working but publish **no point
-cloud at all**, so there is nothing further to fetch however you ask. Regenerate with
-`./coverage_map.py lidar`.
+Green is the ten states whose elevation can be had in both products — nine by script, plus HE
+by post, which is why HE carries a `*`. Orange is HB and ST, which publish elevation openly but
+hand over no more than a fraction of it. Red is BW, HH, NI and SH, scripted and working but
+publishing **no point cloud at all**, so there is nothing further to obtain however you ask.
+Regenerate with `./coverage_map.py lidar`.
 
-Red is therefore not worse than orange by accident: an orange state is one endpoint away from
+Red is therefore not worse than orange by accident: an orange state is one route away from
 green, while a red state has nothing more to give. HH and SH crossed from orange to red on
 2026-08-04 by gaining a downloader, not by losing anything.
 
-**HE is the orange state least likely to go green by finding an endpoint.** Its point cloud is
-free and statewide, and HVBG will copy it onto a hard disk you post them — publication by
-padded envelope, with nothing in it for a script to drive. HB is orange for having no
-identified bulk product and ST for publishing only two sample areas anonymously; all three are
-"open but not scriptable", by three different routes. See
+**Why HE is green with no downloader.** The colour answers "can we have all of it", and the
+answer is yes: HVBG copies the statewide laser scan onto a disk you post them, and DGM1 is a
+free storefront order. Colouring that worse than BY's Atom feeds would say Hessen withholds
+something it does not — the gap is in this repo's automation, not in the state's publishing,
+and the `*` is where that gap is recorded. See
 [Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
 
-ST stays orange despite having a downloader: the map is about fetching a *state* in bulk, and
-what Sachsen-Anhalt gives away anonymously is two sample areas — the statewide point cloud is
-still portal-and-invoice only. See [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
+ST stays orange despite having a downloader, and does **not** qualify for HE's treatment even
+though "on request" sounds like the same thing. What Sachsen-Anhalt gives away anonymously is
+two sample areas; the statewide point cloud is 190 € and an invitation to apply that nobody
+here has taken up. An offline route counts when it is free, statewide and confirmed — a price
+list is none of the three. See [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
 
 The per-state table — products, downloader, CRS and licence — is
 [README.md §1](README.md#1-lidar--terrain-availability).
 
 **13 of 16 states are scripted statewide** — 315,593 km², 88% of Germany's land area by the
 figures in [The 16 Bundesländer](#the-16-bundesländer), and well over 12 TB of point cloud
-between them. ST adds a fourteenth downloader, but
+between them. Hessen adds a fourteenth *obtainable* state without adding a downloader, taking
+the share that can be had in bulk by some route to **336,709 km², 94%** — the two figures
+differ by exactly the 21,116 km² that arrive by courier. ST adds a fourteenth downloader, but
 only for the two sample areas it publishes openly (see
-[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)), so it is not counted in the thirteen
+[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)), so it counts towards neither number
 and stays orange on the map above.
 
 SH and HH joined on 2026-08-04 and both are terrain-only, because neither publishes a point
@@ -861,33 +870,32 @@ BBOX="658,5746,662,5750" AREAS=hakel ./download_st_lidar.sh
 repo's ST sample square (Wernigerode) falls in neither area, so `download_samples.sh` plans
 **0 tiles** for ST and says so — that is a real coverage gap, not a broken downloader.
 
-## The other two states
+## Bremen: the last unproven verdict
 
-These are **also open data** — neither puts the LiDAR behind a login — but no anonymous
-*bulk* endpoint was verified, so there is no script. The blocker is delivery mechanics, not
-access rights.
+Bremen is **also open data** — it does not put LiDAR behind a login — but no open bulk product
+was ever identified here. Unlike ST, which at least publishes samples, and HE, which will post
+you a disk, there is no known route of any kind. That is the whole of what is known, which is
+exactly the problem.
 
-Four states have now left this table, and not one of them had changed what it publishes —
-only what had been looked at. TH's three INSPIRE Atom feeds were linked from the very page
-that was tried. SL's point cloud was in the Nextcloud share this repo *already reads for
-ALKIS*, one folder along from the one it was opening. SH's `gaialight` index was recorded here
-as returning an empty FeatureCollection — it returns 18,685 tiles, each with a direct link,
-and the previous verdict was written from a different endpoint of the same app. HH's blocker
-was the directory listing, which does 403 — but the archives behind it never needed one, and
-the Transparenzportal's CKAN API lists them.
+Five states have now left this table, and not one of them had changed what it publishes — only
+what had been looked at. TH's three INSPIRE Atom feeds were linked from the very page that was
+tried. SL's point cloud was in the Nextcloud share this repo *already reads for ALKIS*, one
+folder along from the one it was opening. SH's `gaialight` index was recorded here as returning
+an empty FeatureCollection — it returns 18,685 tiles, each with a direct link, and the previous
+verdict was written from a different endpoint of the same app. HH's blocker was the directory
+listing, which does 403 — but the archives behind it never needed one, and the
+Transparenzportal's CKAN API lists them. And HE, the fifth, was cleared without any endpoint at
+all: someone sent an email and was offered a hard disk.
 
-So treat every "no bulk endpoint" verdict below as unproven until someone has checked for an
-Atom/INSPIRE service under `…/dienste/`, listed every folder of any share the state already
-exposes, and asked whether the catalogue API can substitute for the listing that 403s. On the
-evidence so far, that verdict has been wrong four times out of six.
+So treat Bremen's verdict as unproven until someone has checked for an Atom/INSPIRE service
+under `…/dienste/`, listed every folder of any share the state already exposes, asked whether
+the catalogue API can substitute for a listing that 403s — and, on Hessen's precedent, simply
+written to ask. On the evidence so far that verdict has been wrong five times out of six, and
+the sixth is the one still standing.
 
-| ID | State | Status | What blocks a script |
-|----|-------|--------|----------------------|
-| **HE** | Hessen | Open since 2022-02-01, no usage conditions. DGM1 free in the Downloadcenter; point cloud free **by post** — see [below](#hessen-a-hard-disk-in-the-post). | DGM1 is delivered through an Intershop storefront (`gds.hessen.de`), a zero-price cart rather than a directory; automating it is untested. The point cloud has no online delivery at all. |
-| **HB** | Bremen | No open LiDAR bulk product identified. | — |
-
-If you need one of these, the practical route today is the state's interactive portal — except
-for Hessen's point cloud, which is a padded envelope.
+| ID | State | Status | What blocks a bulk copy |
+|----|-------|--------|-------------------------|
+| **HB** | Bremen | No open LiDAR bulk product identified. | Unknown — no product located, so nothing to characterise. |
 
 ## Hessen: a hard disk in the post
 
@@ -896,15 +904,25 @@ email on **2026-08-04**: send them a hard disk, they copy the statewide laser sc
 send it back. The data itself is free — Hessen's geodata has carried **no usage conditions
 since 2022-02-01** — so the cost is the disk and the postage in both directions.
 
-This is why HE keeps a ⚠️ in the point-cloud column rather than being promoted. Every other
-⚠️ in this repo has been a delivery mechanism someone had not yet driven correctly, and four
-of six such verdicts turned out to be wrong — TH's Atom feeds, SL's share, SH's index, HH's
-CKAN API were all sitting in plain sight. Hessen's is a different kind of gap and worth
-stating plainly so nobody spends an afternoon on it: **the offered route is a disk, not a
-URL.** HVBG answered a request for the point cloud with the postal arrangement rather than a
-link, which is a strong signal there is no online delivery to find — though it is their answer
-to one email, not an exhaustive audit of `gds.hessen.de`. If you do turn up a bulk endpoint,
-that is a correction worth making here, in the same spirit as the four above.
+**This counts as a bulk route, and HE is green on the LiDAR map because of it.** The maps were
+originally colouring by "can a script fetch it", which was a fine proxy for "can we have it"
+right up until a state offered to hand over the whole thing on a disk. Those are different
+questions and Hessen is where they came apart. Ranking it below BY — whose Atom feeds this repo
+does drive — would have said Hessen withholds something it does not; the honest reading is that
+Hessen publishes everything and this repo simply has nothing to automate. That distinction is
+recorded as the `*` on the map and the § in the README tables, not as a worse colour.
+
+The bar for counting an offline route is deliberately narrow, because it would otherwise
+swallow every "contact us" page in the country. It has to be **free**, cover the **whole
+state**, and have been **actually confirmed** by someone rather than inferred from a
+price list. Hessen clears all three. Sachsen-Anhalt's 190 € "auf Antrag" product clears none of
+them, which is why ST stays orange with a downloader while HE goes green without one.
+
+What is *not* claimed here: that no online endpoint exists. HVBG answered a request for the
+point cloud with the postal arrangement rather than a link, which is a strong signal — but it
+is one email, not an audit of `gds.hessen.de`. If a bulk endpoint does turn up, that is a
+correction worth making, in the same spirit as the five in
+[Bremen: the last unproven verdict](#bremen-the-last-unproven-verdict).
 
 Practical notes before you post anything:
 
@@ -916,12 +934,14 @@ Practical notes before you post anything:
 - **Agree the scope in writing first** — vintages, classification, tiling and format were not
   established in the exchange, and a disk is an expensive way to discover you got the wrong
   one.
-- **DGM1 does not need any of this.** It is free in the Downloadcenter and stays a separate,
-  online (if unscripted) route.
+- **DGM1 does not need any of this.** It is free in the `gds.hessen.de` storefront, ordered
+  through a zero-price cart rather than posted — a separate, online, still-unscripted route.
+  That is why HE's DTM column is also ✅ §: obtainable in full, by hand.
 
-Nothing here is wired into `download_all.sh`, and nothing can be. If a disk arrives, its
-contents join the tree the same way any other state's `las` output does — the
-[per-state notes](#per-state-lidar-notes) below cover the layout the other downloaders write.
+Nothing here is wired into `download_all.sh`, and nothing can be — `ONLY=he ./download_all.sh`
+covers HE's cadastre and stops there. If a disk arrives, its contents join the tree the same
+way any other state's `las` output does; the [per-state notes](#per-state-lidar-notes) below
+cover the layout the other downloaders write.
 
 ## Two UTM zones
 

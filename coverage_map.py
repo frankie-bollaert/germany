@@ -4,15 +4,15 @@
 One per section of README_download.md, which answers the same questions in prose and tables;
 these put the answers on geometry, so a glance replaces a table read.
 
-  coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
-            green    all four are scriptable today                                       (7)
-            orange   elevation works, but one of the four is missing at the source        (2)
-            red      no bulk LiDAR endpoint -- open, but portal or post only              (3)
+  coverage  can we obtain all four datasets -- point cloud, terrain, plots, house structures?
+            green    all four are obtainable today                                       (7)
+            orange   elevation works, but one of the four is missing at the source        (3)
+            red      no bulk LiDAR route -- the state cannot be had whole                 (2)
             darkred  no point cloud published at all -- terrain only                      (4)
 
-  lidar     what elevation can a script actually fetch in bulk?
-            green  point cloud + terrain                                                 (9)
-            orange open, but no bulk endpoint -- portal, or a hard disk in the post       (3)
+  lidar     what elevation can be obtained in bulk?
+            green  point cloud + terrain                                                (10)
+            orange open, but not obtainable whole                                         (2)
             red    terrain only -- the state publishes no point cloud                     (4)
 
   alkis     what does the state's cadastre actually contain?
@@ -28,10 +28,15 @@ the alkis map -- an unscriptable state still has every product, just not through
 while BW, HH, NI and SH publish no point cloud however you ask, and that is the deeper red on
 the coverage map.
 
-Orange on the lidar map is not one story. HB has no identified bulk product, ST publishes two
-sample areas out of a state, and HE will copy its point cloud onto a hard disk you post to
-HVBG -- free, but not a URL. Only the first two can be cleared by finding an endpoint; see
-"Hessen: a hard disk in the post" in README_download.md.
+These maps colour by whether a state can be OBTAINED, not by whether this repo has automated
+it. Those came apart on 2026-08-04, when HVBG confirmed it will copy Hessen's statewide laser
+scan onto a hard disk you post them, free. Hessen is therefore green with no downloader, and
+carries a * instead: the data is all gettable, none of it through an endpoint. Colouring it
+worse would have said Hessen withholds something it does not.
+
+The bar for an offline route is deliberately high -- confirmed, free, and the whole state. ST
+fails it on two counts (190 EUR, and an invitation to apply rather than a walked route), which
+is why the two states left orange on the lidar map are HB and ST.
 
 Red never means "closed" except on the alkis map. All 16 states publish elevation openly, and
 orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
@@ -39,7 +44,8 @@ as raster, so the download works and the geometry simply is not in it. The legen
 because "not supported" would be wrong in every one of those cases.
 
 Inputs are read from bundeslaender.geojson's own properties (lidar_las, lidar_dgm1,
-lidar_script, alkis, alkis_engine, alkis_spatial) so the maps cannot drift from the GeoJSON.
+lidar_script, lidar_offline, alkis, alkis_engine, alkis_spatial) so the maps cannot drift from
+the GeoJSON.
 Only building footprints need a table here -- see HOUSES below.
 
 Boundaries come from bundeslaender.geojson (CRS84 lon/lat), so run
@@ -126,25 +132,47 @@ LEGEND_BASE, LEGEND_ROW = 58, 20
 # README_download.md -- the ID is the ISO 3166-2 code minus the DE- prefix, and the same string
 # indexes the GeoJSON, sample_squares.tsv, download_alkis.sh and the output trees.
 FOOTNOTE = "Labels are state IDs — ISO 3166-2 without the DE- prefix."
+# Drawn only on the elevation maps, and only when a state is actually starred.
+OFFLINE_FOOTNOTE = "* obtainable in bulk, but offline — no endpoint to script."
+
+
+def reachable(props):
+    """Can the whole state's elevation be obtained in bulk, by any route we have confirmed?
+
+    A downloader is one such route. Hessen's hard disk is the other: post HVBG a disk and the
+    statewide laser scan comes back on it, free. Both elevation maps ask this question rather
+    than "is there a URL", because a state you can have all of is not in the same position as
+    one you cannot, however the bytes travel.
+
+    The bar is a route someone has actually confirmed, free and covering the whole state. That
+    is what keeps ST out: its statewide product is 190 EUR and an invitation to apply, and what
+    is free there is two sample areas.
+    """
+    return bool(props.get("lidar_script")) or bool(props.get("lidar_offline"))
+
+
+def offline_only(props):
+    """Reachable, but with no endpoint behind it. Marked with * so green is not misread."""
+    return bool(props.get("lidar_offline")) and not props.get("lidar_script")
 
 
 def classify_coverage(props, key):
     """Return (tier, detail) for the all-four-datasets map.
 
-    lidar_dgm1/lidar_las say the state *publishes* the product; lidar_script says this repo
-    can actually fetch it in bulk. The map is about what we can fetch, so both are required --
-    that gap is why five states fall to a red tier while publishing elevation openly.
+    lidar_dgm1/lidar_las say the state *publishes* the product; reachable() says we can get all
+    of it. The map is about what we can obtain, so both are required.
 
     The two red tiers are different kinds of gap, ordered the same way the lidar map orders
-    them. 'none' is a delivery problem: the products exist, a portal just will not hand them
-    over in bulk, so the day an endpoint appears the state moves up. 'nolas' is a source
-    problem: BW and NI publish no point cloud at all, so there is nothing further to fetch
-    however the request is made. That makes it the worse of the two, hence the deeper red.
+    them. 'none' is a delivery problem: the products exist, nothing hands them over whole, so
+    the day a route appears the state moves up -- which is precisely what happened to HE on
+    2026-08-04, without anyone writing a line of code. 'nolas' is a source problem: BW, HH, NI
+    and SH publish no point cloud at all, so there is nothing further to obtain however the
+    request is made. That makes it the worse of the two, hence the deeper red.
     """
-    scripted = bool(props.get("lidar_script"))
+    ok = reachable(props)
     have = {
-        "point cloud": scripted and bool(props.get("lidar_las")),
-        "terrain": scripted and bool(props.get("lidar_dgm1")),
+        "point cloud": ok and bool(props.get("lidar_las")),
+        "terrain": ok and bool(props.get("lidar_dgm1")),
         "plots": props.get("alkis") == "full",
         "houses": HOUSES[key],
     }
@@ -154,9 +182,9 @@ def classify_coverage(props, key):
         detail += f" (missing: {', '.join(missing)})"
     if not missing:
         return "full", detail
-    # Order matters: an unscripted state has no point cloud either, and its gap is the milder
-    # of the two, so the no-endpoint test has to come first.
-    if not scripted:
+    # Order matters: an unreachable state has no point cloud either, and its gap is the milder
+    # of the two, so the no-route test has to come first.
+    if not ok:
         return "none", detail
     if not have["point cloud"]:
         return "nolas", detail
@@ -166,19 +194,28 @@ def classify_coverage(props, key):
 def classify_lidar(props, key):
     """Return (tier, detail) for the elevation map.
 
-    The split that matters is not open/closed -- all 16 publish elevation openly -- but
-    whether a script can reach it in bulk, and then whether both products are there to reach.
-    See this map's legend in MAPS for which tier gets which colour; it is not the same
-    assignment as the other two maps.
+    The split that matters is not open/closed -- all 16 publish elevation openly -- but whether
+    the whole state can be obtained, and then whether both products are there to obtain. See
+    this map's legend in MAPS for which tier gets which colour; it is not the same assignment
+    as the other two maps.
+
+    Scripted and offline routes land in the same tier on purpose. The distinction is real, so
+    it survives in the tooltip and in the * on the label -- but it is a statement about this
+    repo's automation, not about the state's data, and colouring by it would say Hessen
+    withholds something it does not.
     """
     script = props.get("lidar_script")
-    if not script:
-        return "none", f"no bulk endpoint. {props.get('lidar_note') or ''}".strip()
+    offline = props.get("lidar_offline")
+    if not script and not offline:
+        return "none", f"no bulk route. {props.get('lidar_note') or ''}".strip()
     have = [n for n, ok in (("point cloud", props.get("lidar_las")),
                             ("terrain", props.get("lidar_dgm1"))) if ok]
-    bbox = "BBOX supported" if props.get("lidar_bbox") else "no BBOX support"
-    detail = f"{script} — {' + '.join(have)}; {bbox}"
-    return ("full" if len(have) == 2 else "partial"), detail
+    if script:
+        bbox = "BBOX supported" if props.get("lidar_bbox") else "no BBOX support"
+        how = f"{script} — {' + '.join(have)}; {bbox}"
+    else:
+        how = f"{' + '.join(have)} — offline, no endpoint: {offline}"
+    return ("full" if len(have) == 2 else "partial"), how
 
 
 # How finely download_alkis.sh can cut what a state publishes, spelled out for the tooltip.
@@ -219,20 +256,22 @@ MAPS = {
         out="coverage_map.svg",
         classify=classify_coverage,
         heading="Point cloud + terrain + plots + house structures",
+        mark_offline=True,
         legend=[("full", "green", "all four datasets"),
                 ("partial", "orange", "missing one of the four"),
-                ("none", "red", "no bulk LiDAR endpoint — portal only"),
+                ("none", "red", "no bulk LiDAR route — cannot obtain the state"),
                 ("nolas", "darkred", "no point cloud published — terrain only")],
     ),
     "lidar": dict(
         out="lidar_map.svg",
         classify=classify_lidar,
-        heading="LiDAR / terrain — what a script can fetch in bulk",
-        # Red is "terrain only" here, not "no bulk endpoint" -- the inverse of the other two
-        # maps. A state with no point cloud published has nothing more to give; one behind a
-        # portal has all of it, just not scriptably, so it is the milder of the two.
+        heading="LiDAR / terrain — what can be obtained in bulk",
+        # Red is "terrain only" here, not "no bulk route" -- the inverse of the other two maps.
+        # A state with no point cloud published has nothing more to give; one without a route
+        # has all of it and merely withholds delivery, so it is the milder of the two.
+        mark_offline=True,
         legend=[("full", "green", "point cloud + terrain"),
-                ("none", "orange", "open, but no bulk endpoint — portal only"),
+                ("none", "orange", "open, but not obtainable whole"),
                 ("partial", "red", "terrain only — no point cloud published")],
     ),
     "alkis": dict(
@@ -328,7 +367,7 @@ def main():
         return (ox + (lon * kx - x0) * scale, PAD + (y1 - lat) * scale)
 
     colour = {tier: PALETTE[name] for tier, name, _ in spec["legend"]}
-    drawn, labels = [], []
+    drawn, labels, starred = [], [], False
     counts = {tier: 0 for tier, _, _ in spec["legend"]}
     for f in feats:
         p = f["properties"]
@@ -370,8 +409,13 @@ def main():
         else:
             dx, dy = NUDGE.get(key, (0, 0))
             lx, ly = cx + dx, cy + dy
+        # The * keeps "obtainable" and "automated" from collapsing into one another. HE is
+        # green because the data is all gettable, and starred because none of it arrives
+        # through an endpoint -- both facts matter and the colour can only carry one.
+        star = "*" if spec.get("mark_offline") and offline_only(p) else ""
+        starred = starred or bool(star)
         labels.append(f'  <text x="{lx:.1f}" y="{ly + 3.5:.1f}" fill="{stroke}">'
-                      f'{key.upper()}</text>')
+                      f'{key.upper()}{star}</text>')
 
     # Largest first, so the enclosed city-states stay visible.
     body = [svg for _, svg in sorted(drawn, key=lambda d: -d[0])]
@@ -385,8 +429,13 @@ def main():
         leg.append(f'  <rect x="{PAD}" y="{y - 9}" width="15" height="12" rx="2" '
                    f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>')
         leg.append(f'  <text x="{PAD + 22}" y="{y}" class="l">{text}</text>')
-    leg.append(f'  <text x="{PAD}" y="{ly + len(spec["legend"]) * LEGEND_ROW + 2}" class="f">'
-               f'{FOOTNOTE}</text>')
+    fy = ly + len(spec["legend"]) * LEGEND_ROW + 2
+    leg.append(f'  <text x="{PAD}" y="{fy}" class="f">{FOOTNOTE}</text>')
+    # Second footnote line only where something is actually starred, so the maps that have no
+    # offline state do not carry an explanation for a mark they never draw. Both layouts leave
+    # room: the deepest legend puts this at y=787 of 800.
+    if starred:
+        leg.append(f'  <text x="{PAD}" y="{fy + 13}" class="f">{OFFLINE_FOOTNOTE}</text>')
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" \
 viewBox="0 0 {W} {H}" font-family="Helvetica,Arial,sans-serif">

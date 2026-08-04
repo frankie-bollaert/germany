@@ -29,9 +29,15 @@ VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
 # Those two documents remain the prose source of truth; this is their machine-readable form.
 #
 #   lidar_dgm1 / lidar_las : does the state publish it openly at all
-#   lidar_script           : the downloader in this repo, or None if bulk access is unsolved
+#   lidar_script           : the downloader in this repo, or None if there is no endpoint
+#   lidar_offline          : a confirmed bulk route with no endpoint behind it -- today only
+#                            Hessen's hard disk. None everywhere else. A state is reachable in
+#                            bulk if it has EITHER a script or an offline route; the maps
+#                            colour by that, and mark the offline ones so green does not read
+#                            as "scripted". Priced or sample-only routes do not qualify --
+#                            see the st entry.
 #   lidar_bbox             : does that downloader accept BBOX
-#   lidar_note             : why there is no script, when there is none
+#   lidar_note             : how the state is reached, or why it cannot be
 #   alkis                  : full | partial | none  (oE = ohne Eigentuemer; owners are never open)
 #   alkis_engine           : which of the four download engines the state needs
 #   alkis_spatial          : how finely a 5x5 km sample can be cut from what it publishes
@@ -65,17 +71,20 @@ COVERAGE = {
                lidar_dgm1=True, lidar_las=True, lidar_script="download_nrw_lidar.sh",
                lidar_bbox=True, lidar_note=None,
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
-    # lidar_las flipped to True on 2026-08-04, without moving HE on either map. The field says
-    # the state publishes the product, not that this repo can fetch it -- and HVBG confirmed by
-    # email that the point cloud is available to anyone who posts them a hard disk, free, the
-    # data being open since 2022. That is publication, so False was wrong. It is not an
-    # endpoint, so lidar_script stays None and HE stays orange. Same shape as st, minus the
-    # price. See "Hessen: a hard disk in the post" in README_download.md.
+    # HE is the reason lidar_offline exists. HVBG confirmed by email (2026-08-04) that it will
+    # copy the statewide laser scan onto a hard disk you post them, free -- and DGM1 is free in
+    # the storefront. Both products are therefore obtainable whole, which is what these maps
+    # are asked to show, so HE is green with lidar_script=None. The absence of an endpoint is
+    # carried by lidar_offline and the * on the label, not by a worse colour: "we cannot
+    # automate it" and "you cannot have it" are different claims and only the first is true.
     "he": dict(name_short="Hessen",
                lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
-               lidar_note="Point cloud is free but ships on a hard disk you post to HVBG -- no "
-                          "endpoint, so no script. DGM1 is free too, through an Intershop "
-                          "storefront (gds.hessen.de) with no static index or feed.",
+               lidar_offline="point cloud on a hard disk posted to HVBG; DGM1 through the free "
+                             "gds.hessen.de storefront",
+               lidar_note="Both products are free and obtainable statewide, neither through an "
+                          "endpoint: the laser scan is copied onto a hard disk you post to "
+                          "HVBG, and DGM1 is a zero-price Intershop cart with no static index. "
+                          "Manual either way, so there is no script.",
                alkis="full", alkis_engine="ogcapi", alkis_spatial="exact"),
     "rp": dict(name_short="Rheinland-Pfalz",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_rlp_lidar.sh",
@@ -123,6 +132,12 @@ COVERAGE = {
                # the two published sample areas (~0.1% of the state), and this field feeds a map
                # about bulk access to a whole state. See README, "Sachsen-Anhalt: samples, not a
                # state".
+               #
+               # ST gets no lidar_offline either, though "auf Antrag" is superficially the same
+               # shape as Hessen's disk. Two differences, and either one is disqualifying: it is
+               # 190 EUR per Datensatz rather than free, and it is an offer to be applied for
+               # rather than an arrangement anyone has confirmed. lidar_offline records routes
+               # that were actually walked, not ones a price list implies.
                lidar_note="Statewide 3D-Messdaten is priced and on request; only two sample "
                           "areas are open (download_st_lidar.sh). DGM1 UI caps selection at 5 tiles.",
                # ALKIS-vereinfacht 2.0 over an anonymous WFS 2.0 (ST_LVermGeo_ALKIS_WFS_OpenData):
@@ -140,8 +155,12 @@ ARS_TO_KEY = {"01": "sh", "02": "hh", "03": "ni", "04": "hb", "05": "nw", "06": 
 
 
 def status(c):
-    """One field a map can colour by, without unpacking the booleans."""
-    lidar = c["lidar_script"] is not None
+    """One field a map can colour by, without unpacking the booleans.
+
+    "lidar" means the whole state is obtainable, by script or by the one confirmed offline
+    route -- the same test the maps apply.
+    """
+    lidar = c["lidar_script"] is not None or c.get("lidar_offline") is not None
     alkis = c["alkis"] != "none"
     if lidar and alkis:
         return "lidar+alkis"
@@ -208,6 +227,7 @@ def main():
             "lidar_dgm1": c["lidar_dgm1"],
             "lidar_las": c["lidar_las"],
             "lidar_script": c["lidar_script"],
+            "lidar_offline": c.get("lidar_offline"),
             "lidar_bbox": c["lidar_bbox"],
             "lidar_note": c["lidar_note"],
             "alkis": c["alkis"],
