@@ -190,14 +190,18 @@ SPATIAL = {
 def classify_alkis(props, key):
     """Return (tier, detail) for the cadastre map, straight off the GeoJSON's alkis fields.
 
-    'partial' is not a delivery problem here -- BY and RP publish their cadastre as raster
-    (Parzellarkarte / Liegenschaftskarte) with no bulk vector parcels. The download works
-    fine; what arrives is a picture of the parcels, not their geometry.
+    'partial' means no bulk vector parcels, which BY and RP arrive at from opposite
+    directions. BY does not publish them at all: the Bayerisches VermKatG carves
+    Flurstücksinformationen out of the open-data regime, so what is free is the raster
+    Parzellarkarte -- a picture of the parcels, not their geometry. RP does publish vector
+    ALKIS ohne Eigentümer, but only as a per-order "Live-Produkt" generated in a cart
+    workflow; its INSPIRE service is metadata-marked gebührenpflichtig and answers feature
+    queries with an empty collection, so there is no route a script can drive either.
     """
     tier = {"full": "full", "partial": "partial", "none": "none"}[props["alkis"]]
     if tier == "none":
         return tier, "not open data -- parcels need a formal request"
-    what = "full vector oE" if tier == "full" else "raster cadastral map only"
+    what = "full vector oE" if tier == "full" else "no bulk vector parcels"
     return tier, (f"{what}; {props.get('alkis_engine') or '-'} engine, "
                   f"{SPATIAL.get(props.get('alkis_spatial'), '?')}")
 
@@ -230,7 +234,7 @@ MAPS = {
         classify=classify_alkis,
         heading="ALKIS cadastre - parcels, buildings, land use",
         legend=[("full", "green", "full vector cadastre (oE)"),
-                ("partial", "orange", "raster cadastral map only"),
+                ("partial", "orange", "no bulk vector parcels"),
                 ("none", "red", "not open data")],
     ),
 }
