@@ -889,9 +889,35 @@ maps they are green with a `€`; here is what is actually on offer, as of 2026-
 
 | | Product | Coverage | Density | Format | Terms | Ask |
 |---|---|---|---|---|---|---|
-| **BW** | LGL `ALS_2` | statewide, 2016–21 campaign | ≥ 8 pts/m² | LAZ, LAS or XYZ-ASCII | licensed **Open Data**; effort-based Service-Entgelt, **min. 60 € + VAT** | `geodaten@lgl.bwl.de` · 0711 95980-200 |
-| **NI** | LGLN Laserscan-Punktwolke (3D-Messdaten) | statewide | ≥ 4 pts/m² | LAZ 1.2, 1 km² tiles | **KOVerm** fee schedule, no public per-km² rate, quote on request; LGLN **AGNB**, not CC BY | `geoService-3D@lgln.niedersachsen.de` |
+| **BW** | LGL `ALS_2` | statewide, 2016–21 campaign | ≥ 8 pts/m² | LAZ, LAS or XYZ-ASCII | licensed **Open Data**; effort-based Service-Entgelt, **min. 60 € + VAT**, per order | `geodaten@lgl.bwl.de` · 0711 95980-200 |
+| **NI** | LGLN Laserscan-Punktwolke (3D-Messdaten) | statewide | ≥ 4 pts/m² | LAZ 1.2, 1 km² tiles | **KOVerm** fee schedule, no public per-km² rate, quote on request, per delivery; LGLN **AGNB**, not CC BY | `geoService-3D@lgln.niedersachsen.de` |
 | **ST** | LVermGeo 3D-Messdaten | statewide, 6-year cycle | 4–8 pts/m² | LAS 1.2 / LAZ | **190 € je Datensatz**, auf Antrag; DGM and DOM derived from it are sold separately | see below |
+
+### One-time or annual?
+
+**All three are one-time, per delivery.** None of them is a subscription: BW's
+Service-Entgelt is charged for the work of cutting and shipping an order, NI's is a KOVerm
+fee per Lieferung invoiced at 30 days, and ST's 190 € is *je Datensatz*. Nothing renews, and
+nothing expires — once the tiles are on your disk they stay yours to use.
+
+Two things do recur, and neither is the data:
+
+- **ST's fee table has a second row that is not a delivery.** The *Online-Dienst* tariff is
+  `je Zugang 300,00` plus `zuzüglich jährlich je angefangene 10 Nutzerkennungen 50,00` — an
+  annual charge per block of ten user accounts. That buys a service, not a copy of the point
+  cloud; the 190 € row is the one that gets you files.
+- **A new flight is a new order.** ST reflies on a six-year cycle, BW's `ALS_3` recapture runs
+  to ~2029, and NI's catalogue is already multi-temporal. Staying current means paying again
+  per campaign — a repeating cost, but from re-buying, not from a licence clock.
+
+**The catch is rights, not price — and it is NI's.** The LGLN **AGNB** grants use, but §5
+restricts *Weitergabe an Dritte* to contractors, only for as long as the job needs it and with
+a written obligation to delete every copy afterwards; publishing the data onward needs a
+separate licensing agreement (§4.2), which municipalities and state bodies are exempt from.
+So NI's cloud can go into an internal product but not straight into a public one. BW's `ALS_2`
+is the opposite — Open Data by licence, so the 60 € buys the handling and the redistribution
+right comes with it. ST's 190 € row sits under its Open Data tariff. If what you are building
+republishes the data, that difference matters more than any of the prices above.
 
 Three things are worth noticing across the row.
 

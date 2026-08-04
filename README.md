@@ -63,6 +63,12 @@ terrain — and each is ordered by email rather than fetched from a URL:
 | **NI** | LGLN Laserscan-Punktwolke (3D-Messdaten) | statewide, ≥ 4 pts/m² | KOVerm fee schedule, no public per-km² rate, quote on request; LGLN AGNB, not CC BY | `geoService-3D@lgln.niedersachsen.de` |
 | **ST** | LVermGeo 3D-Messdaten (`las` + DGM/DOM) | statewide, 6-year cycle, 4–8 pts/m² | 190 € je Datensatz, auf Antrag | see [Sachsen-Anhalt](README_download.md#sachsen-anhalt-samples-not-a-state) |
 
+**Every one of these is a one-time charge per delivery, not a subscription** — nothing renews
+and nothing expires. What differs is the *rights*: BW's is open data, so redistribution comes
+with it, while NI's AGNB confines the data to your own use and contractors unless you agree a
+separate licence. See
+[One-time or annual?](README_download.md#one-time-or-annual).
+
 BW's is the odd one: `ALS_2` *is* open data — what you pay for is the handling, not the
 rights. The repo had BW down as having no point cloud at all, on the strength of a dead `3DM`
 product that was never the laser scan. NI's DGM1 and BW's DGM1 are still free downloads; only
