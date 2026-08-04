@@ -8,12 +8,12 @@ these put the answers on geometry, so a glance replaces a table read.
             green    all four are obtainable today                                       (7)
             orange   elevation works, but one of the four is missing at the source        (3)
             red      no bulk LiDAR route -- the state cannot be had whole                 (2)
-            darkred  no point cloud published at all -- terrain only                      (4)
+            darkred  no open point cloud -- terrain only                                  (4)
 
   lidar     what elevation can be obtained in bulk?
             green  point cloud + terrain                                                (10)
             orange open, but not obtainable whole                                         (2)
-            red    terrain only -- the state publishes no point cloud                     (4)
+            red    terrain only -- the state publishes no open point cloud                (4)
 
   alkis     what does the state's cadastre actually contain?
             green  full vector ALKIS ohne Eigentuemer                                   (14)
@@ -24,9 +24,15 @@ Colour is per-map, not per-tier, because "worst" is a different question on each
 the only map with four tiers: it splits red so that a state we merely cannot reach in bulk is
 not painted the same as one with nothing left to reach for. The lidar map draws the same
 distinction with the colours it has, which is why its red and orange read as inverted next to
-the alkis map -- an unscriptable state still has every product, just not through an endpoint,
-while BW, HH, NI and SH publish no point cloud however you ask, and that is the deeper red on
-the coverage map.
+the alkis map -- an unscriptable state still has every product openly, just not through an
+endpoint, while BW, HH, NI and SH put no point cloud into the open at all, and that is the
+deeper red on the coverage map.
+
+"No open point cloud" is deliberately not "no point cloud". NI proves the difference: LGLN
+flew the scan its open DGM1 is derived from and sells it as a priced product (lidar_las_priced
+in the GeoJSON, shown in NI's tooltip). That does not lift the colour -- a quotation is not a
+bulk route, by the same rule that keeps ST orange -- but it does mean the gap is a licence,
+not a missing survey, and the legend must not claim otherwise.
 
 These maps colour by whether a state can be OBTAINED, not by whether this repo has automated
 it. Those came apart on 2026-08-04, when HVBG confirmed it will copy Hessen's statewide laser
@@ -156,6 +162,17 @@ def offline_only(props):
     return bool(props.get("lidar_offline")) and not props.get("lidar_script")
 
 
+def priced_suffix(props):
+    """The for-sale route, appended to a tooltip that has just reported a missing point cloud.
+
+    Both elevation maps do this, and only for the states that have no open point cloud: it is
+    the one place where "we cannot get it" needs the reason spelled out, because the colour
+    reads as "there is none" and for NI that would be wrong.
+    """
+    priced = props.get("lidar_las_priced")
+    return f". Point cloud sold, not published: {priced}" if priced else ""
+
+
 def classify_coverage(props, key):
     """Return (tier, detail) for the all-four-datasets map.
 
@@ -165,9 +182,12 @@ def classify_coverage(props, key):
     The two red tiers are different kinds of gap, ordered the same way the lidar map orders
     them. 'none' is a delivery problem: the products exist, nothing hands them over whole, so
     the day a route appears the state moves up -- which is precisely what happened to HE on
-    2026-08-04, without anyone writing a line of code. 'nolas' is a source problem: BW, HH, NI
-    and SH publish no point cloud at all, so there is nothing further to obtain however the
-    request is made. That makes it the worse of the two, hence the deeper red.
+    2026-08-04, without anyone writing a line of code. 'nolas' is a supply problem: BW, HH, NI
+    and SH put no point cloud into the open at all, so no request phrased as open data can
+    reach one. That makes it the worse of the two, hence the deeper red.
+
+    Worse, but not hopeless: where a state sells what it will not publish, lidar_las_priced
+    says so and the tooltip carries it. Only NI has one today.
     """
     ok = reachable(props)
     have = {
@@ -182,12 +202,12 @@ def classify_coverage(props, key):
         detail += f" (missing: {', '.join(missing)})"
     if not missing:
         return "full", detail
-    # Order matters: an unreachable state has no point cloud either, and its gap is the milder
+    # Order matters: an unreachable state scores no point cloud either, and its gap is the milder
     # of the two, so the no-route test has to come first.
     if not ok:
         return "none", detail
     if not have["point cloud"]:
-        return "nolas", detail
+        return "nolas", detail + priced_suffix(props)
     return "partial", detail
 
 
@@ -215,7 +235,9 @@ def classify_lidar(props, key):
         how = f"{script} — {' + '.join(have)}; {bbox}"
     else:
         how = f"{' + '.join(have)} — offline, no endpoint: {offline}"
-    return ("full" if len(have) == 2 else "partial"), how
+    if len(have) == 2:
+        return "full", how
+    return "partial", how + priced_suffix(props)
 
 
 # How finely download_alkis.sh can cut what a state publishes, spelled out for the tooltip.
@@ -260,19 +282,20 @@ MAPS = {
         legend=[("full", "green", "all four datasets"),
                 ("partial", "orange", "missing one of the four"),
                 ("none", "red", "no bulk LiDAR route — cannot obtain the state"),
-                ("nolas", "darkred", "no point cloud published — terrain only")],
+                ("nolas", "darkred", "no open point cloud — terrain only")],
     ),
     "lidar": dict(
         out="lidar_map.svg",
         classify=classify_lidar,
         heading="LiDAR / terrain — what can be obtained in bulk",
         # Red is "terrain only" here, not "no bulk route" -- the inverse of the other two maps.
-        # A state with no point cloud published has nothing more to give; one without a route
-        # has all of it and merely withholds delivery, so it is the milder of the two.
+        # A state with no open point cloud has nothing more to give as open data; one without
+        # a route publishes all of it and merely withholds delivery, so it is the milder of
+        # the two.
         mark_offline=True,
         legend=[("full", "green", "point cloud + terrain"),
                 ("none", "orange", "open, but not obtainable whole"),
-                ("partial", "red", "terrain only — no point cloud published")],
+                ("partial", "red", "terrain only — no open point cloud")],
     ),
     "alkis": dict(
         out="alkis_map.svg",

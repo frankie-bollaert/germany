@@ -16,7 +16,7 @@ you post them. The § marks that split where it exists — today, only HE.
 
 # 1. LiDAR / terrain availability
 
-<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, HE, MV, NW, RP, SL, SN, TH) for point cloud plus terrain obtainable in bulk, with HE starred because it arrives offline on a posted hard disk; orange (HB, ST) for open data not obtainable whole; red (BW, HH, NI, SH) for terrain only" width="560">
+<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, HE, MV, NW, RP, SL, SN, TH) for point cloud plus terrain obtainable in bulk, with HE starred because it arrives offline on a posted hard disk; orange (HB, ST) for open data not obtainable whole; red (BW, HH, NI, SH) for terrain only, NI's point cloud being sold rather than published" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Bulk downloader | CRS | Licence |
 |----|-------|:-----------:|:----------:|-----------------|-----|---------|
@@ -61,13 +61,24 @@ told to send a disk. Sachsen-Anhalt's statewide product is 190 € per Datensatz
 invitation to apply that nobody here has taken up. § marks routes that have been walked, not
 ones a price list implies; if the ST application turns out to deliver the state, it earns one.
 
+**NI's point cloud is not missing, it is priced.** LGLN flew the airborne laser scan that its
+open DGM1 is derived from and sells the classified result as the *Laserscan-Punktwolke*, part
+of the 3D-Messdaten: 1 km² LAZ 1.2 tiles, ≥ 4 points/m², ≤ 0.30 m in position and ≤ 0.15 m in
+height, delivered by download or on a data carrier LGLN posts you. It is charged under the
+Kostenordnung für das amtliche Vermessungswesen — no public per-km² rate, a quote on request
+from `geoService-3D@lgln.niedersachsen.de` — and it carries the LGLN AGNB rather than the
+CC BY 4.0 the DGM1 comes under. The ❌ therefore means what the legend above says it means,
+*not published as open data*, and NI keeps its colour on both maps for the same reason ST
+does: a quotation is not a bulk route. See
+[Niedersachsen](README_download.md#niedersachsen-ni).
+
 **HH and SH moved from orange to red, which is not a downgrade.** Both used to sit in the
 "open, but not obtainable whole" tier; both now have a downloader. What is left is that
-neither publishes a point cloud at all, and on this map that is the deeper gap — a portal can
-be scripted around, an unflown survey cannot. Hamburg's DGM1 archives were always anonymous;
-only the directory listing was closed, and the file list comes from the Transparenzportal's
-CKAN API instead. Schleswig-Holstein's tile index was recorded here as returning an empty
-FeatureCollection; it returns 18,685 tiles.
+neither publishes a point cloud as open data, and on this map that is the deeper gap — a
+portal can be scripted around, a licence decision cannot. Hamburg's DGM1 archives were always
+anonymous; only the directory listing was closed, and the file list comes from the
+Transparenzportal's CKAN API instead. Schleswig-Holstein's tile index was recorded here as
+returning an empty FeatureCollection; it returns 18,685 tiles.
 
 # 2. ALKIS / cadastre availability
 
@@ -106,7 +117,7 @@ RP's is a delivery restriction, not a legal one, and is the likelier of the two 
 
 # 3. Complete coverage — all four datasets
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, HE, RP) for one missing, light red (HB, ST) for no bulk LiDAR route, dark red (BW, HH, NI, SH) for no point cloud published" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, HE, RP) for one missing, light red (HB, ST) for no bulk LiDAR route, dark red (BW, HH, NI, SH) for no point cloud as open data" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
@@ -118,7 +129,7 @@ RP's is a delivery restriction, not a legal one, and is the likelier of the two 
 | **HH** | Hamburg | ❌ no point cloud published | ✅ `download_hh_lidar.sh` — 9 vintages, CKAN API for the file list | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
 | **HE** | Hessen | ✅ § statewide laser scan, copied onto a hard disk you post to HVBG | ✅ § free `gds.hessen.de` storefront — a zero-price cart, no static index | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **MV** | Mecklenburg-Vorpommern | ✅ `download_mv_lidar.sh` | ✅ same | ✅ `download_alkis.sh mv` — NAS + Shape, 724 Gemeinden | ✅ that package, plus a dedicated HU Atom ZIP |
-| **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
+| **NI** | Niedersachsen | ❌ **not open** — STAC exposes `dgm1` only; the ALS cloud is sold as 3D-Messdaten | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **NW** | Nordrhein-Westfalen | ✅ `download_nrw_lidar.sh` † | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |
 | **RP** | Rheinland-Pfalz | ✅ `download_rlp_lidar.sh` † | ✅ same | ❌ **no bulk route** ‡ — what the downloader gets is the `lika` GeoTIFF Liegenschaftskarte | ✅ `download_alkis.sh rp hu` — ZIP + `.meta4`, HK the same way |
 | **SL** | Saarland | ✅ `download_sl_lidar.sh` | ✅ same — `dgm1`/`dom1`, laz or GeoTIFF | ✅ `download_alkis.sh sl` — NAS/Shape, 7 Landkreise | ✅ inside that package (standalone HU is INSPIRE WFS only) |

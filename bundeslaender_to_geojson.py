@@ -36,6 +36,11 @@ VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
 #                            colour by that, and mark the offline ones so green does not read
 #                            as "scripted". Priced or sample-only routes do not qualify --
 #                            see the st entry.
+#   lidar_las_priced       : the state sells its point cloud although it publishes none. It
+#                            changes no colour -- a priced route is not obtainable, by the same
+#                            rule that keeps ST orange -- but it changes what the absence
+#                            MEANS, so it is recorded and shown in the tooltip. lidar_las stays
+#                            False: the field asks what is open, and a quotation is not.
 #   lidar_bbox             : does that downloader accept BBOX
 #   lidar_note             : how the state is reached, or why it cannot be
 #   alkis                  : full | partial | none  (oE = ohne Eigentuemer; owners are never open)
@@ -61,7 +66,19 @@ COVERAGE = {
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "ni": dict(name_short="Niedersachsen",
                lidar_dgm1=True, lidar_las=False, lidar_script="download_ni_lidar.sh",
-               lidar_bbox=True, lidar_note=None,
+               lidar_bbox=True,
+               # NI is the state that showed why "publishes no point cloud" and "has no point
+               # cloud" had to be told apart. LGLN flew the scan the open DGM1 is derived from
+               # and sells it as the Laserscan-Punktwolke; it is simply not open data. The
+               # colour does not move -- priced is not obtainable, the same rule that keeps ST
+               # out -- but the gap is a licence-and-invoice gap, not a missing survey.
+               lidar_las_priced="LGLN sells the classified ALS Laserscan-Punktwolke "
+                                "(3D-Messdaten) under the KOVerm fee schedule: 1 km2 LAZ 1.2 "
+                                "tiles, >=4 pts/m2, quote on request, delivered by download or "
+                                "on a posted data carrier. Not CC BY like the DGM1 -- it comes "
+                                "under the LGLN AGNB.",
+               lidar_note="STAC catalogue exposes dgm1 only, already COG. The point cloud "
+                          "behind it is a priced LGLN product, not open data.",
                alkis="full", alkis_engine="wfs2", alkis_spatial="exact"),
     "hb": dict(name_short="Bremen",
                lidar_dgm1=False, lidar_las=False, lidar_script=None, lidar_bbox=None,
@@ -228,6 +245,7 @@ def main():
             "lidar_las": c["lidar_las"],
             "lidar_script": c["lidar_script"],
             "lidar_offline": c.get("lidar_offline"),
+            "lidar_las_priced": c.get("lidar_las_priced"),
             "lidar_bbox": c["lidar_bbox"],
             "lidar_note": c["lidar_note"],
             "alkis": c["alkis"],

@@ -14,9 +14,15 @@
 #   dgm1 — bare-earth terrain model, 1 m grid, **already Cloud Optimized GeoTIFF**
 #          statewide: on the order of 47,000 tiles
 #
-#   las  — NOT AVAILABLE. LGLN publishes no open airborne laser point cloud: the STAC
-#          catalogue exposes only the `dgm1` collection (a sibling `dom` service covers the
-#          surface model, also raster). `./download_ni_lidar.sh las` says so and exits.
+#   las  — NOT AVAILABLE AS OPEN DATA, and that is the whole of it: the scan exists, LGLN
+#          sells it. The STAC catalogue exposes only the `dgm1` collection (a sibling `dom`
+#          service covers the surface model, also raster), while the classified cloud the
+#          DGM1 is rasterised from is the priced "Laserscan-Punktwolke" (3D-Messdaten) —
+#          1 km² LAZ 1.2 tiles on this same grid, >=4 pts/m², charged under the KOVerm fee
+#          schedule, quoted on request, delivered by download or on a posted data carrier,
+#          and licensed under the LGLN AGNB rather than CC BY.
+#          Ordering is an email, not a URL, so there is nothing to script:
+#          geoService-3D@lgln.niedersachsen.de. `./download_ni_lidar.sh las` says so and exits.
 #
 # Method  : LGLN runs a STAC API. The script walks the paged item list, pulls each item's
 #           `dgm1-tif` asset href, and writes an aria2c input file: parallel, resumable.
@@ -195,10 +201,16 @@ case "$DATASET" in
 Niedersachsen publishes no open airborne laser point cloud.
 The LGLN STAC catalogue exposes only the `dgm1` collection (plus a raster `dom` service);
 there is no NI counterpart to RLP's / NRW's `las`. Use `dgm1`.
+
+The scan itself is not missing, it is sold: the classified cloud the DGM1 is derived from is
+LGLN's priced "Laserscan-Punktwolke" (3D-Messdaten) — 1 km2 LAZ tiles on this same grid,
+>=4 pts/m2, charged under the KOVerm fee schedule and licensed under the LGLN AGNB, not CC BY.
+It is quoted on request and delivered by download or on a posted data carrier, so there is no
+endpoint for this script to drive. Ask geoService-3D@lgln.niedersachsen.de.
 EOF
     exit 3 ;;
   both)
-    echo "note: NI has no point cloud — running dgm1 only." >&2
+    echo "note: NI has no open point cloud (LGLN sells it) — running dgm1 only." >&2
     fetch_dgm1 ;;
   *) echo "Usage: $0 [dgm1] [output_dir]" >&2; exit 2 ;;
 esac

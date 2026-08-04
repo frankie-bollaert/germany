@@ -89,8 +89,9 @@ script_for() {
   esac
 }
 
-# bw and ni publish no point cloud, so their downloaders only offer dgm1. Read that off the
-# usage line rather than hard-coding a list that would drift as states start publishing.
+# bw and ni publish no open point cloud (ni sells its scan instead), so their downloaders only
+# offer dgm1. Read that off the usage line rather than hard-coding a list that would drift as
+# states start publishing.
 offers() { grep -qE "^# Usage.*\[.*\b$2\b.*\]" "$1"; }
 
 # A script mentioning BBOX does not mean it honours BBOX for every dataset it offers, and the
