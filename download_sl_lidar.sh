@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# download_sl_lidar.sh — download the Saarland (Germany) open LiDAR point cloud.
+# download_sl_lidar.sh — download the Saarland (Germany) open LiDAR point cloud and terrain.
 #
 # Source  : Landesamt für Vermessung, Geoinformation und Landentwicklung (LVGL) des Saarlandes
 #           Open Data · https://www.shop.lvgl.saarland.de/index.php?option=com_content&view=article&id=18
@@ -31,10 +31,20 @@
 #          Six of six districts: 3,076 tiles, ~124 GB, spanning E 308-384 / N 5441-5500 in
 #          UTM32 km. Full state coverage, one campaign, no vintages to choose between.
 #
-#   DGM1 and DOM1 are published in the same share — OD_DGM1_2025_{laz,tif}_LK and
-#   OD_DOM1_2025_{laz,tif}_LK, 2-5.7 GB each — but this script covers the point cloud only.
-#   Asking it for dgm1/dom1 prints where they are rather than half-implementing them; adding
-#   them later is one folder name each, since the packaging is identical.
+#   dgm1 — bare-earth terrain model, 1 m grid, derived from that same 2025 scan
+#          tiles named dgm1_32_<E_km>_<N_km>_1_SL_2025.<tif|laz>, one per km²
+#          GeoTIFF 4.0 MB/tile (5.5 GB statewide) · LAZ ~0.7 MB/tile (2.1 GB statewide)
+#
+#   dom1 — surface model (first return), same grid, same naming with a dom1_ prefix
+#          GeoTIFF 6.2 GB statewide · LAZ 2.8 GB
+#
+#          All three carry the same 3,076-tile grid, packaged one ZIP per Landkreis, so
+#          BBOX and KREISE behave identically across them.
+#
+#   FORMAT=tif (default) or FORMAT=laz picks the encoding for dgm1/dom1. GeoTIFF is the
+#   default because convert_to_cloud_optimized.sh takes it straight; the LAZ variants are the
+#   same grid as a point-per-cell cloud, at roughly a third of the bytes. `las` is published
+#   only as LAZ, so FORMAT does not apply to it.
 #
 # Method  : The share is Nextcloud. Its public WebDAV endpoint serves the ZIPs anonymously and
 #           honours Range, so this script does NOT download the archives whole: it reads each
@@ -59,9 +69,12 @@
 #           No checksums are published — sizes are checked against the ZIP directory, not
 #           hash-verified.
 #
-# Usage   : ./download_sl_lidar.sh [las] [output_dir]
+# Usage   : ./download_sl_lidar.sh [las|dgm1|dom1|both] [output_dir]
 #   ./download_sl_lidar.sh                                  # all six districts, ~124 GB
 #   ./download_sl_lidar.sh las /mnt/big/sl                  # same, somewhere with room
+#   ./download_sl_lidar.sh dgm1                             # terrain only, 5.5 GB GeoTIFF
+#   ./download_sl_lidar.sh both                             # las + dgm1, ~130 GB
+#   FORMAT=laz ./download_sl_lidar.sh dgm1                  # terrain as LAZ instead, 2.1 GB
 #   KREISE=NK ./download_sl_lidar.sh                        # one district, 12.5 GB
 #   DRY_RUN=1 ./download_sl_lidar.sh                        # list the tiles, fetch nothing
 #   BBOX="320,5484,324,5488" ./download_sl_lidar.sh         # the repo's Mettlach square
@@ -69,9 +82,11 @@
 # Env vars (override defaults):
 #   KREISE="MZG NK SB SLS SPK WND"   which district archives to read (default: all six)
 #   BBOX="minE,minN,maxE,maxN"       UTM32 kilometres, inclusive, on the tile's SW corner
+#   FORMAT=tif|laz                   encoding for dgm1/dom1 (default tif; las is LAZ-only)
 #   JOBS=4     tiles fetched concurrently
 #   DRY_RUN=1  list the tiles and their sizes, download nothing
-#   OUTDIR=<path>  write the .laz straight here instead of <output_dir>/<dataset>.
+#   OUTDIR=<path>  write the tiles straight here instead of <output_dir>/<dataset>.
+#                  Single-dataset runs only — with "both" the two products would collide.
 #                  download_all.sh uses this to lay every state out as <root>/<state>-<dataset>.
 #
 set -euo pipefail
@@ -81,34 +96,47 @@ OUTROOT="${2:-./sl_lidar}"
 JOBS="${JOBS:-4}"
 DRY_RUN="${DRY_RUN:-0}"
 KREISE="${KREISE:-MZG NK SB SLS SPK WND}"
+FORMAT="${FORMAT:-tif}"
 
 case "$DATASET" in
-  las) ;;
-  dgm1|dom1|both)
-    cat >&2 <<'EOF'
-ERROR: this script covers Saarland's open point cloud only.
-
-       DGM1 and DOM1 are published, in the same LVGL share, as both LAZ and GeoTIFF:
-         .../cloud/freiegeobasisdaten -> OD_DGM1_2025_tif_LK   (5.1 GB, per Landkreis)
-                                         OD_DGM1_2025_laz_LK   (2.0 GB)
-                                         OD_DOM1_2025_tif_LK   (5.7 GB)
-                                         OD_DOM1_2025_laz_LK   (2.8 GB)
-       Same packaging as the point cloud, so wiring them in is one folder name each.
-
-       Point cloud:  ./download_sl_lidar.sh las
-EOF
-    exit 2 ;;
-  *) echo "Usage: $0 [las] [output_dir]" >&2; exit 2 ;;
+  las|dgm1|dom1) DATASETS="$DATASET" ;;
+  both)          DATASETS="las dgm1" ;;
+  *) echo "Usage: $0 [las|dgm1|dom1|both] [output_dir]" >&2; exit 2 ;;
 esac
 
-DIR="${OUTDIR:-$OUTROOT/$DATASET}"
-mkdir -p "$DIR"
+case "$FORMAT" in
+  tif|laz) ;;
+  *) echo "ERROR: FORMAT must be tif or laz, got '$FORMAT'" >&2; exit 2 ;;
+esac
 
-echo "==> SL las  (Saarland airborne laser scan 2025)"
-echo "    districts : $KREISE"
-echo "    out       : $DIR"
+if [[ -n "${OUTDIR:-}" && "$DATASET" == "both" ]]; then
+  echo "ERROR: OUTDIR is for single-dataset runs — las and dgm1 would collide in one folder." >&2
+  exit 2
+fi
 
-KREISE="$KREISE" BBOX="${BBOX:-}" JOBS="$JOBS" DRY_RUN="$DRY_RUN" python3 - "$DIR" <<'PY'
+fetch_one() {
+  local dataset="$1" folder ext label
+
+  # The share names every folder OD_<product>_<year>_<encoding>_<unit>. `las` exists only as
+  # LAZ; dgm1/dom1 come in both encodings and FORMAT picks one.
+  case "$dataset" in
+    las)  folder="OD_LIDAR_Punktwolke_2025_laz_LK"; ext=".laz"
+          label="airborne laser scan 2025, classified point cloud" ;;
+    dgm1) folder="OD_DGM1_2025_${FORMAT}_LK";       ext=".$FORMAT"
+          label="terrain model 2025, 1 m grid, $FORMAT" ;;
+    dom1) folder="OD_DOM1_2025_${FORMAT}_LK";       ext=".$FORMAT"
+          label="surface model 2025, 1 m grid, $FORMAT" ;;
+  esac
+
+  local DIR="${OUTDIR:-$OUTROOT/$dataset}"
+  mkdir -p "$DIR"
+
+  echo "==> SL $dataset  (Saarland $label)"
+  echo "    districts : $KREISE"
+  echo "    out       : $DIR"
+
+  FOLDER="$folder" EXT="$ext" \
+  KREISE="$KREISE" BBOX="${BBOX:-}" JOBS="$JOBS" DRY_RUN="$DRY_RUN" python3 - "$DIR" <<'PY'
 import os, re, struct, sys, threading, time, urllib.error, urllib.parse, urllib.request, zlib
 from queue import Queue
 
@@ -120,7 +148,8 @@ DRY    = os.environ["DRY_RUN"] == "1"
 
 HOST  = "https://www.shop.lvgl.saarland.de"
 ALIAS = f"{HOST}/cloud/freiegeobasisdaten"
-FOLDER = "OD_LIDAR_Punktwolke_2025_laz_LK"
+FOLDER = os.environ["FOLDER"]
+EXT    = os.environ["EXT"]
 UA = {"User-Agent": "download_sl_lidar.sh"}
 
 def get(url, start=None, end=None, method="GET", extra=None):
@@ -177,9 +206,11 @@ for resp in re.findall(r"<d:response>(.*?)</d:response>", body, re.S):
 if not archives:
     raise SystemExit(f"no ZIP listed in {FOLDER} — the share layout changed")
 
-# LIDAR_laz_<district>_EPSG-25832_Entstehung-2025.zip
+# LIDAR_laz_<district>_EPSG-25832_Entstehung-2025.zip, and the same shape for the models:
+# DGM1_tif_<district>_..., DOM1_laz_<district>_...  Anchoring on _EPSG keeps the district
+# group from swallowing it.
 def district_of(name):
-    m = re.search(r"LIDAR_laz_([A-Z]+)_", name)
+    m = re.search(r"_(?:laz|tif)_([A-Z]+)_EPSG", name)
     return m.group(1) if m else None
 
 known = {district_of(a[0]) for a in archives} - {None}
@@ -248,16 +279,17 @@ def index(url, total):
         p += 46 + nl + el + cl
     return out
 
-# Tile names carry the SW corner in km: 3dm_32_349_5473_1_SL_2025_050.laz
-TILE = re.compile(r"3dm_32_(\d+)_(\d+)_")
+# Tile names carry the SW corner in km, in the same two positions for every product:
+#   3dm_32_349_5473_1_SL_2025_050.laz   dgm1_32_349_5473_1_SL_2025.tif
+TILE = re.compile(r"_32_(\d+)_(\d+)_1_SL_")
 
 plan, skipped_box = [], 0
 for name, url, total in sorted(wanted):
     d = district_of(name)
     print(f"    {d}: {name}  ({total / 1e9:.1f} GB archive)")
-    laz = [e for e in index(url, total) if e[0].endswith(".laz")]
+    tiles = [e for e in index(url, total) if e[0].endswith(EXT)]
     took = 0
-    for entry_name, lho, method, csz, usz in laz:
+    for entry_name, lho, method, csz, usz in tiles:
         base = os.path.basename(entry_name)
         if box:
             m = TILE.search(base)
@@ -269,7 +301,7 @@ for name, url, total in sorted(wanted):
                 continue
         plan.append((url, base, lho, method, csz, usz))
         took += 1
-    print(f"      {took}/{len(laz)} tiles selected")
+    print(f"      {took}/{len(tiles)} tiles selected")
 
 total_bytes = sum(p[5] for p in plan)
 print(f"    tiles: {len(plan)}  ~{total_bytes / 1e9:.1f} GB"
@@ -325,8 +357,8 @@ def _fetch(url, base, lho, method, csz, usz):
     start = lho + 30 + nl + el
 
     tmp = dest + ".part"
-    # Every .laz entry is deflated (method 8), but stored (0) costs one branch to support and
-    # saves a silent corruption if LVGL ever repackages.
+    # Every tile entry is deflated (method 8) in all three products, but stored (0) costs one
+    # branch to support and saves a silent corruption if LVGL ever repackages.
     dec = zlib.decompressobj(-15) if method == 8 else None
     got = 0
     with get(url, start, start + csz - 1) as r, open(tmp, "wb") as fh:
@@ -384,7 +416,12 @@ if errors:
     raise SystemExit(1)
 PY
 
-echo "    done -> $DIR"
+  echo "    done -> $DIR"
+}
+
+for ds in $DATASETS; do
+  fetch_one "$ds"
+done
 
 cat <<EOF
 
