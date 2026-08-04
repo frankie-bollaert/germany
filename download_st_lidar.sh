@@ -80,7 +80,9 @@ case "$DATASET" in
 ERROR: Sachsen-Anhalt publishes no bulk DGM1/DOM1 endpoint — only the GeoCMS
        "Kartendownloader" widget, which caps a selection at 5 tiles per request:
          https://www.lvermgeo.sachsen-anhalt.de/de/gdp-dgm1.html
-       This script covers the open point cloud only:  ./download_st_lidar.sh las
+       Statewide, DGM and DOM are sold: they are derived from the 3D-Messdaten and
+       priced alongside it (190 € je Datensatz, auf Antrag). No endpoint either way.
+       This script covers the open sample point cloud only:  ./download_st_lidar.sh las
        (A statewide DGM5 raster IS a single free ZIP, if that is enough for you:
         https://www.geodatenportal.sachsen-anhalt.de/gfds_webshare/download/LVermGeo/Geodatenportal/Online-Bereitstellung-LVermGeo/DGM/DGM5.zip)
 EOF

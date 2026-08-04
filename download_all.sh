@@ -159,11 +159,11 @@ note_for() {  # note_for <state> <dataset> <content>
   esac
 }
 
-# LiDAR is scripted for 12 states, and two of those publish no point cloud as open data:
-# Baden-Württemberg's 3DM product is flagged inactive (every URL 404s) and Niedersachsen's
-# STAC catalogue exposes raster only — LGLN sells the scan behind it instead, which is an
-# invoice and a posted disk, not an endpoint. Those combinations are absent from the matrix
-# above rather than left to fail at runtime.
+# LiDAR is scripted for 12 states, and two of those have no point cloud endpoint: BW's and
+# NI's clouds are both sold rather than published -- LGL's ALS_2 for a handling fee, LGLN's
+# Laserscan-Punktwolke on a KOVerm quote -- and an email order is not something a matrix entry
+# can drive. Those combinations are absent from the matrix above rather than left to fail at
+# runtime. The states are still obtainable whole; see "The states that sell it" in the README.
 
 # Repo ID -> LiDAR script filename. Two predate the naming rule and keep their old names.
 lidar_script() {

@@ -130,7 +130,7 @@ convert_dgm1() {
 
 convert_las() {
   if [ "$STATE" = "bw" ]; then
-    echo "==> las: skipped — Baden-Württemberg publishes no open point cloud (see download_bw_lidar.sh)."
+    echo "==> las: skipped — nothing downloaded; BW's ALS_2 ships on a paid LGL order."
     return 0
   fi
   need pdal "brew install pdal"

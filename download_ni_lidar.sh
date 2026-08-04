@@ -210,7 +210,7 @@ endpoint for this script to drive. Ask geoService-3D@lgln.niedersachsen.de.
 EOF
     exit 3 ;;
   both)
-    echo "note: NI has no open point cloud (LGLN sells it) — running dgm1 only." >&2
+    echo "note: NI's point cloud is a paid LGLN order, not a download — running dgm1 only." >&2
     fetch_dgm1 ;;
   *) echo "Usage: $0 [dgm1] [output_dir]" >&2; exit 2 ;;
 esac

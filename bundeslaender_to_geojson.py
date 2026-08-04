@@ -36,11 +36,15 @@ VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
 #                            colour by that, and mark the offline ones so green does not read
 #                            as "scripted". Priced or sample-only routes do not qualify --
 #                            see the st entry.
-#   lidar_las_priced       : the state sells its point cloud although it publishes none. It
-#                            changes no colour -- a priced route is not obtainable, by the same
-#                            rule that keeps ST orange -- but it changes what the absence
-#                            MEANS, so it is recorded and shown in the tooltip. lidar_las stays
-#                            False: the field asks what is open, and a quotation is not.
+#   lidar_las_paid /       : the product cannot be downloaded, but the state will sell it, for
+#   lidar_dgm1_paid          the whole state. This COUNTS as obtainable -- the maps ask whether
+#                            the data can be had, and an invoice is a way of having it -- so a
+#                            paid route colours the same green a script does, and the state is
+#                            marked with a EUR sign instead. lidar_las/lidar_dgm1 stay False
+#                            where nothing is published: those fields ask what is open, and a
+#                            quotation is not, however cheap.
+#   lidar_paid_note        : that route -- product, price, terms, who to ask. Shown in the
+#                            tooltip, because "green" alone would read as "free download".
 #   lidar_bbox             : does that downloader accept BBOX
 #   lidar_note             : how the state is reached, or why it cannot be
 #   alkis                  : full | partial | none  (oE = ohne Eigentuemer; owners are never open)
@@ -69,14 +73,15 @@ COVERAGE = {
                lidar_bbox=True,
                # NI is the state that showed why "publishes no point cloud" and "has no point
                # cloud" had to be told apart. LGLN flew the scan the open DGM1 is derived from
-               # and sells it as the Laserscan-Punktwolke; it is simply not open data. The
-               # colour does not move -- priced is not obtainable, the same rule that keeps ST
-               # out -- but the gap is a licence-and-invoice gap, not a missing survey.
-               lidar_las_priced="LGLN sells the classified ALS Laserscan-Punktwolke "
-                                "(3D-Messdaten) under the KOVerm fee schedule: 1 km2 LAZ 1.2 "
-                                "tiles, >=4 pts/m2, quote on request, delivered by download or "
-                                "on a posted data carrier. Not CC BY like the DGM1 -- it comes "
-                                "under the LGLN AGNB.",
+               # and sells it as the Laserscan-Punktwolke; it is simply not open data. Both
+               # products can be had for the whole state -- one by script, one by invoice --
+               # so NI is green, with the EUR sign carrying the difference.
+               lidar_las_paid=True,
+               lidar_paid_note="LGLN sells the classified ALS Laserscan-Punktwolke "
+                               "(3D-Messdaten) under the KOVerm fee schedule: 1 km2 LAZ 1.2 "
+                               "tiles, >=4 pts/m2, quote on request, delivered by download or "
+                               "on a posted data carrier. Not CC BY like the DGM1 -- it comes "
+                               "under the LGLN AGNB. Ask geoService-3D@lgln.niedersachsen.de.",
                lidar_note="STAC catalogue exposes dgm1 only, already COG. The point cloud "
                           "behind it is a priced LGLN product, not open data.",
                alkis="full", alkis_engine="wfs2", alkis_spatial="exact"),
@@ -109,9 +114,25 @@ COVERAGE = {
                lidar_note="Downloader exists but is the only one without BBOX; its Metalink "
                           "filenames already carry UTM km, so adding it is mechanical.",
                alkis="partial", alkis_engine="metalink", alkis_spatial="tile"),
+    # The 3DM tiles this repo probed are dead, but they were never the point cloud product.
+    # LGL keeps it under Laserscandaten: ALS_2 is the whole state from the 2016-2021 campaign
+    # and is Open Data by licence -- what costs money is the handling, not the rights. So BW's
+    # gap was never "no point cloud", it was "no endpoint", and under a rule that counts paid
+    # routes it is green with a EUR sign, exactly like NI.
     "bw": dict(name_short="Baden-Wuerttemberg",
                lidar_dgm1=True, lidar_las=False, lidar_script="download_bw_lidar.sh",
-               lidar_bbox=True, lidar_note=None,
+               lidar_bbox=True,
+               lidar_las_paid=True,
+               lidar_paid_note="LGL's ALS_2 covers all of Baden-Wuerttemberg from the "
+                               "2016-2021 campaign at >=8 pts/m2, in LAZ, LAS or XYZ-ASCII, "
+                               "and is licensed Open Data -- but it ships on an email order "
+                               "with an effort-based Service-Entgelt, minimum 60 EUR plus VAT. "
+                               "ALS_3 (the 2022-2029 recapture) is the same arrangement and "
+                               "still in progress; ALS_1 (2000-2005, 0.8 pts/m2) is historic "
+                               "and no longer maintained. Ask geodaten@lgl.bwl.de.",
+               lidar_note="DGM1 is scripted. The point cloud is not published for download at "
+                          "all -- the dead 3DM tiles were a red herring -- but LGL sells the "
+                          "statewide ALS_2 for a handling fee.",
                alkis="full", alkis_engine="aria2", alkis_spatial="gemarkung"),
     "by": dict(name_short="Bayern",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_by_lidar.sh",
@@ -150,11 +171,17 @@ COVERAGE = {
                # about bulk access to a whole state. See README, "Sachsen-Anhalt: samples, not a
                # state".
                #
-               # ST gets no lidar_offline either, though "auf Antrag" is superficially the same
-               # shape as Hessen's disk. Two differences, and either one is disqualifying: it is
-               # 190 EUR per Datensatz rather than free, and it is an offer to be applied for
-               # rather than an arrangement anyone has confirmed. lidar_offline records routes
-               # that were actually walked, not ones a price list implies.
+               # ST gets no lidar_offline: that field is for FREE routes with no endpoint, and
+               # Hessen is still the only one. ST's route is a priced one, which is what the
+               # two _paid flags are for. Both products are on the price list -- the point
+               # cloud as 3D-Messdaten, DGM and DOM derived from it and sold separately -- so
+               # ST is obtainable whole, for money, and green with a EUR sign.
+               lidar_las_paid=True, lidar_dgm1_paid=True,
+               lidar_paid_note="LVermGeo sells the statewide 3D-Messdaten point cloud (LAS 1.2 "
+                               "or LAZ, 4-8 pts/m2, reflown on a 6-year cycle) at 190 EUR je "
+                               "Datensatz, auf Antrag; DGM and DOM are derived from it and "
+                               "sold separately. What is free is two sample areas and a UI "
+                               "that caps a DGM1 selection at 5 tiles.",
                lidar_note="Statewide 3D-Messdaten is priced and on request; only two sample "
                           "areas are open (download_st_lidar.sh). DGM1 UI caps selection at 5 tiles.",
                # ALKIS-vereinfacht 2.0 over an anonymous WFS 2.0 (ST_LVermGeo_ALKIS_WFS_OpenData):
@@ -174,10 +201,11 @@ ARS_TO_KEY = {"01": "sh", "02": "hh", "03": "ni", "04": "hb", "05": "nw", "06": 
 def status(c):
     """One field a map can colour by, without unpacking the booleans.
 
-    "lidar" means the whole state is obtainable, by script or by the one confirmed offline
-    route -- the same test the maps apply.
+    "lidar" means the whole state is obtainable, by any confirmed route: a script, the one
+    free offline route (HE), or a purchase -- the same test the maps apply.
     """
-    lidar = c["lidar_script"] is not None or c.get("lidar_offline") is not None
+    lidar = (c["lidar_script"] is not None or c.get("lidar_offline") is not None
+             or c.get("lidar_las_paid") or c.get("lidar_dgm1_paid"))
     alkis = c["alkis"] != "none"
     if lidar and alkis:
         return "lidar+alkis"
@@ -245,7 +273,9 @@ def main():
             "lidar_las": c["lidar_las"],
             "lidar_script": c["lidar_script"],
             "lidar_offline": c.get("lidar_offline"),
-            "lidar_las_priced": c.get("lidar_las_priced"),
+            "lidar_las_paid": bool(c.get("lidar_las_paid")),
+            "lidar_dgm1_paid": bool(c.get("lidar_dgm1_paid")),
+            "lidar_paid_note": c.get("lidar_paid_note"),
             "lidar_bbox": c["lidar_bbox"],
             "lidar_note": c["lidar_note"],
             "alkis": c["alkis"],

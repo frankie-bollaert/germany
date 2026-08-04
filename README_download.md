@@ -483,14 +483,16 @@ Sections 2 and 3 each answer one dataset at a time. This one answers the crossin
 footprints?** Footprint sources are detailed in
 [`cadastre-products.md`](cadastre-products.md#3-open-data-equivalents-per-bundesland).
 
-**Seven states: BB, BE, MV, NW, SN, TH, SL.**
+**Ten states: BB, BE, BW, MV, NI, NW, SL, SN, ST, TH** — seven of them free end to end, and
+three (BW, NI, ST) only because a point cloud you buy still counts as a point cloud you can
+have.
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, HE, RP) for one missing, light red (HB, ST) for no bulk LiDAR route, dark red (BW, HH, NI, SH) for no point cloud as open data" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, BW, MV, NI, NW, SL, SN, ST, TH) for all four datasets, with BW, NI and ST marked € because their point cloud is bought rather than downloaded; orange (BY, HE, RP) for one missing; light red (HB) for no bulk LiDAR route; dark red (HH, SH) for no point cloud on any terms" width="560">
 
-Both the seven and the nine that fall short are tabulated in
+Both the ten and the six that fall short are tabulated in
 [README.md §3](README.md#3-complete-coverage--all-four-datasets).
 
-Footprints are never a separate fetch in these seven: ALKIS carries `AX_Gebaeude`, so the
+Footprints are never a separate fetch in these ten: ALKIS carries `AX_Gebaeude`, so the
 parcel download brings them along. The extra products in the last column are convenience —
 smaller, simpler files than a full NAS package for anyone who wants only footprints.
 
@@ -515,19 +517,21 @@ makes it the natural smoke test for a full four-dataset pipeline. **BB** carries
 its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,291-tile DGM1
 grid, released campaign by campaign.
 
-The map carries **two shades of red**, because the two ways of ending up without elevation are
-not the same problem. Light red (HB, ST) is a delivery gap: the products exist and are open,
-but nothing hands them over whole, so these states move up the day a route appears. Dark red
-(BW, HH, NI, SH) is a supply gap — none of them puts a point cloud into the open, so no
-request phrased as open data reaches one, even though all four have working DGM1 downloaders.
-The LiDAR map below ranks them the same way, for the same reason.
+**BW, NI and ST are green with a `€`, and that mark is doing real work.** Each sells a
+statewide point cloud it will not let you download, so the data is obtainable but never for
+free and never through a URL — LGL's `ALS_2` for a handling fee, LGLN's Laserscan-Punktwolke
+on a KOVerm quote, LVermGeo's 3D-Messdaten at 190 € (and in ST's case the terrain is on the
+same invoice). The tooltip on both maps carries the product, the terms and who to ask. Before
+2026-08-05 all three were drawn as though the data did not exist, which was the wrong claim
+about four states at once; see [The states that sell it](#the-states-that-sell-it).
 
-Dark red says *not open*, and for NI that is the whole of it: LGLN **sells** the laser scan
-its free DGM1 is derived from, as the priced Laserscan-Punktwolke — see
-[Niedersachsen](#niedersachsen-ni). The colour does not move, because the bar is the same one
-ST fails: a route counts when it is free, statewide and confirmed. But it is worth being
-precise about which of the two it is, because a price can be paid and a flight that never
-happened cannot. NI's tooltip on both maps carries the product, the terms and the contact.
+The map still carries **two shades of red**, because the two ways of ending up without
+elevation are not the same problem. Light red is a delivery gap: the products exist and are
+open, but nothing hands them over whole, so the state moves up the day a route appears. Only
+**HB** is left there — ST vacated it the moment a price list started counting. Dark red is a
+supply gap: **HH and SH** neither publish a point cloud nor offer to sell one, so there is
+nothing to fetch and nothing to buy, even though both have working DGM1 downloaders. The
+LiDAR map below ranks them the same way, for the same reason.
 
 **HE left light red on 2026-08-04 without anyone writing code**, which is what "a route
 appears" looks like in practice: HVBG will copy the statewide laser scan onto a hard disk you
@@ -541,28 +545,32 @@ three with `./coverage_map.py all` after any coverage change; the script writes 
 and a `.png` per map, same image either way, but only the vector one carries a per-state
 tooltip.
 
-## Why the other nine fall short
+## Why the other six fall short
 
-The nine are the rest of the table in
-[README.md §3](README.md#3-complete-coverage--all-four-datasets) — same columns as the seven,
+The six are the rest of the table in
+[README.md §3](README.md#3-complete-coverage--all-four-datasets) — same columns as the ten,
 so the gaps line up against them.
 
-Every one of the nine has open, scriptable **parcels**. The gaps cluster: RP and BY are a
+Every one of the six has open, scriptable **parcels**. The gaps cluster: RP and BY are a
 single content gap each — a rasterised cadastre, with everything else in place. HE is a third
 single-gap state, and the odd one out, because its missing dataset is footprints rather than
 elevation: the Downloadcenter's Hausumringe needs a free account, while its point cloud and
-DGM1 are both obtainable in full. BW, HH, NI and SH publish no point cloud as open data — in
-NI's case because LGLN sells it instead — so there is nothing further to obtain by asking for
-open data. That leaves HB and ST failing on elevation delivery — no identified bulk product
-and sample-areas-only respectively, neither an access restriction.
-HB, HE, HH and SH additionally have no scriptable standalone footprint product.
+DGM1 are both obtainable in full. HH and SH have no point cloud on any terms, free or paid,
+which is the only gap on this list that no amount of money closes. That leaves HB, where no
+bulk elevation route of any kind has been identified — not an access restriction, an absence
+of a route. HB, HE, HH and SH additionally have no scriptable standalone footprint product.
+
+Three states left this list on 2026-08-05 without publishing anything new: BW, NI and ST all
+sell their point cloud, and once a purchase counts as a route their four datasets are all
+obtainable. What they carry instead is a `€`.
 
 ## Fetching all four today
 
 Whole-state, `download_all.sh` covers it — `ONLY=<id> ./download_all.sh all` fetches every
 dataset that state publishes. What has no single command is a *sample*: `download_samples.sh`
 drives only the LiDAR side, because `download_alkis.sh` has no `BBOX` support, so parcels and
-footprints stay per-state or per-package until that lands. For one of the seven states:
+footprints stay per-state or per-package until that lands. For one of the ten states — the
+seven free ones; for BW, NI and ST the point cloud arrives by invoice, not by script:
 
 ```bash
 ONLY=<id> ./download_all.sh all                 # all four datasets, statewide volumes
@@ -575,29 +583,33 @@ ONLY=<id> ./download_all.sh all                 # all four datasets, statewide v
 
 # 2. LiDAR / terrain availability
 
-**No state gates its LiDAR behind a login** — every one of the 16 publishes it as open data.
-The dividing line this map draws is whether the *whole state* can be obtained at all, by any
-route anyone here has walked: a script, or in Hessen's case a hard disk in the post.
+**No state gates its LiDAR behind a login** — every one of the 16 publishes elevation as open
+data. The dividing line this map draws is whether the *whole state* can be obtained at all, by
+any confirmed route: a script, Hessen's hard disk in the post, or an order form.
 
-<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, HE, MV, NW, RP, SL, SN, TH) for point cloud plus terrain obtainable in bulk, with HE starred because it arrives offline on a posted hard disk; orange (HB, ST) for open data not obtainable whole; red (BW, HH, NI, SH) for terrain only, NI's point cloud being sold rather than published" width="560">
+<img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green for the 13 states whose point cloud and terrain can both be obtained in bulk, HE starred because it arrives offline on a posted hard disk and BW, NI and ST marked € because their point cloud is bought; orange (HB) for open data not obtainable whole; red (HH, SH) for terrain only, no point cloud on any terms" width="560">
 
-Green is the ten states whose elevation can be had in both products — nine by script, plus HE
-by post, which is why HE carries a `*`. Orange is HB and ST, which publish elevation openly but
-hand over no more than a fraction of it. Red is BW, HH, NI and SH, scripted and working but
-publishing **no point cloud as open data**, so no open-data request reaches one.
+Green is the thirteen states whose elevation can be had in both products — nine by script,
+plus HE by post (`*`), plus BW, NI and ST by purchase (`€`). Orange is HB alone, which
+publishes elevation openly and hands over no more than a fraction of it. Red is HH and SH,
+scripted and working for terrain but with **no point cloud on any terms**.
 Regenerate with `./coverage_map.py lidar`.
 
 Red is therefore not worse than orange by accident: an orange state is one route away from
-green, while a red state has nothing more to give away. HH and SH crossed from orange to red
-on 2026-08-04 by gaining a downloader, not by losing anything.
+green, while a red state has nothing more to give — not even for money. HH and SH crossed from
+orange to red on 2026-08-04 by gaining a downloader, not by losing anything.
 
-**Red is a publishing decision, not an empty archive.** A 1 m DGM is derived from a laser
-scan, so every red state has flown one; the question is only what it does with it afterwards.
-NI is the case this repo has confirmed: LGLN sells its scan as a priced product while giving
-the derived DGM1 away under CC BY. That still leaves the point cloud unobtainable here — the
-free-statewide-confirmed bar applies to a price list whoever prints it — but "no point cloud
-published" was the wrong sentence, and the maps and tables now say "no open point cloud"
-instead. Whether BW, HH and SH sell theirs too has not been checked.
+**Red is now a genuinely empty shelf, which it was not before.** A 1 m DGM is derived from a
+laser scan, so every state in this table has flown one; the question is what it does with the
+scan afterwards. Until 2026-08-05 this map answered that question with "does it publish it",
+and painted BW, NI and ST the same as HH and SH — four states drawn as though the survey had
+never happened, when three of them will sell you the whole thing. Red now means the narrower
+and truer claim: nobody here has found a route, free or paid. HH and SH are what is left of
+it — and that is a "not found", not a "does not exist". LGV Hamburg and LVermGeo SH were both
+checked on 2026-08-05 and neither lists a point-cloud product; SH's price list sells the DGM1
+it also gives away free. Neither office was asked directly, so if one of them turns out to
+sell a scan, that is a `€` and a colour change, in the same spirit as the corrections in
+[Bremen: the last unproven verdict](#bremen-the-last-unproven-verdict).
 
 **Why HE is green with no downloader.** The colour answers "can we have all of it", and the
 answer is yes: HVBG copies the statewide laser scan onto a disk you post them, and DGM1 is a
@@ -606,29 +618,42 @@ something it does not — the gap is in this repo's automation, not in the state
 and the `*` is where that gap is recorded. See
 [Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
 
-ST stays orange despite having a downloader, and does **not** qualify for HE's treatment even
-though "on request" sounds like the same thing. What Sachsen-Anhalt gives away anonymously is
-two sample areas; the statewide point cloud is 190 € and an invitation to apply that nobody
-here has taken up. An offline route counts when it is free, statewide and confirmed — a price
-list is none of the three. See [Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
+**ST is green, but it does not get HE's `§`/`*` treatment.** The two arrangements sound alike
+— both are "on request", neither has an endpoint — and the difference is the invoice. Hessen's
+disk is free, so its elevation costs nothing but postage; Sachsen-Anhalt's statewide
+3D-Messdaten is 190 € je Datensatz, and the DGM and DOM derived from it are sold alongside.
+Both states can be had whole, which is why both are green; `*` and `€` say on what terms. What
+ST gives away anonymously is still just two sample areas and a five-tile DGM1 cap. See
+[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state).
 
 The per-state table — products, downloader, CRS and licence — is
 [README.md §1](README.md#1-lidar--terrain-availability).
 
 **13 of 16 states are scripted statewide** — 315,593 km², 88% of Germany's land area by the
 figures in [The 16 Bundesländer](#the-16-bundesländer), and well over 12 TB of point cloud
-between them. Hessen adds a fourteenth *obtainable* state without adding a downloader, taking
-the share that can be had in bulk by some route to **336,709 km², 94%** — the two figures
-differ by exactly the 21,116 km² that arrive by courier. ST adds a fourteenth downloader, but
-only for the two sample areas it publishes openly (see
-[Sachsen-Anhalt](#sachsen-anhalt-samples-not-a-state)), so it counts towards neither number
-and stays orange on the map above.
+between them. Three numbers follow from there, and they are worth keeping apart:
 
-SH and HH joined on 2026-08-04 and both are terrain-only, because neither publishes a point
-cloud — which is why they are red on the LiDAR map rather than green. SL's terrain is now
-wired in alongside its point cloud, so the ◐ that used to sit in its DTM column is gone.
+| Elevation obtainable … | km² | share | who |
+|---|---:|---:|---|
+| by a script here | 315,593 | 88% | the 13 downloaders |
+| + free, but offline | 336,709 | 94% | + HE's posted hard disk |
+| + paid | 357,168 | **99.9%** | + ST's 190 € order — everything but Bremen |
+| …of which the **point cloud** too | 340,609 | 95% | all but HB, HH and SH |
+
+The first two differ by exactly the 21,116 km² that arrive by courier; the third by ST's
+20,459, which is what a price list buys. The fourth is the one to quote when the point cloud
+is what matters: HH and SH have working terrain downloaders and no laser scan on offer at all,
+so 4.6% of Germany is terrain-only whatever the budget.
+
+SH and HH joined on 2026-08-04 and both are terrain-only, because neither publishes or sells a
+point cloud — which is why they are red on the LiDAR map rather than green. SL's terrain is
+now wired in alongside its point cloud, so the ◐ that used to sit in its DTM column is gone.
 
 ## Volumes for the scripted states
+
+Volumes are what a downloader here actually plans. The `€` cells have none: nobody has bought
+those products, so the tile counts and sizes are unknown — see
+[The states that sell it](#the-states-that-sell-it).
 
 | ID | State | `las` (point cloud) | `dgm1` (terrain) |
 |----|-------|---------------------|------------------|
@@ -636,16 +661,16 @@ wired in alongside its point cloud, so the ◐ that used to sit in its DTM colum
 | **BE** | Berlin | 9 region packages, 232.3 GB | 297 tiles (2 km), ~0.2 GB |
 | **BB** | Brandenburg | 13,086 tiles (1 km), ~1.35 TB | 31,291 tiles (1 km), ~36 GB |
 | **MV** | Mecklenburg-Vorpommern | 25,466 tiles (1 km) | 6,407 tiles (2 km) |
-| **NI** | Niedersachsen | ❌ none open — sold by LGLN | 49,708 tiles (1 km), **already COG** |
+| **NI** | Niedersachsen | € not downloadable — LGLN order | 49,708 tiles (1 km), **already COG** |
 | **NW** | Nordrhein-Westfalen | 35,860 tiles (1 km), 3.49 TB | 35,860 tiles (1 km), 78.8 GB |
 | **RP** | Rheinland-Pfalz | ~21,207 tiles (1 km), 5.18 TB | ~21,082 tiles (1 km), 32.8 GB |
 | **SN** | Sachsen | 4,981 tiles (2 km) | 4,981 tiles (2 km) |
-| **BW** | Baden-Württemberg | ❌ none published | 9,370 zips (2 km), ~125 GB |
+| **BW** | Baden-Württemberg | € not downloadable — LGL `ALS_2` order | 9,370 zips (2 km), ~125 GB |
 | **TH** | Thüringen | 16,945 tiles (1 km), ~1.52 TB | 16,945 tiles (1 km), ~127 GB |
 | **SL** | Saarland | 3,076 tiles (1 km), 124 GB | 3,076 tiles (1 km), 12.3 GB GeoTIFF or 2.1 GB LAZ |
-| **SH** | Schleswig-Holstein | ❌ none published | 18,685 tiles (1 km), ~515 GB — **ASCII XYZ** |
-| **HH** | Hamburg | ❌ none published | 880 tiles (1 km), 1.37 GB GeoTIFF (2022 edition) |
-| **ST** | Sachsen-Anhalt | 62 tiles (2 km), 20.4 GB — **two sample areas only** | ❌ no bulk endpoint |
+| **SH** | Schleswig-Holstein | ❌ none published, none for sale | 18,685 tiles (1 km), ~515 GB — **ASCII XYZ** |
+| **HH** | Hamburg | ❌ none published, none for sale | 880 tiles (1 km), 1.37 GB GeoTIFF (2022 edition) |
+| **ST** | Sachsen-Anhalt | 62 tiles (2 km), 20.4 GB free — **two sample areas**; € statewide by order | € by order — the free UI caps a selection at 5 tiles |
 
 TH's figures are for the newest of its three vintages; all three together are ~2.9 TB of
 point cloud and ~219 GB of terrain, on the same grid.
@@ -848,12 +873,43 @@ VINTAGE=2021 ./download_hh_lidar.sh dgm1               # an older one (XYZ, not 
 BBOX="565,5930,570,5935" ./download_hh_lidar.sh        # central Hamburg
 ```
 
-Hamburg publishes no point cloud, so `las` exits 3 with that explanation.
+Hamburg publishes no point cloud and does not sell one either — the one gap on these maps
+that money does not close — so `las` exits 3 with that explanation.
+
+## The states that sell it
+
+Three states will hand over a statewide point cloud and will not let you download it. On the
+maps they are green with a `€`; here is what is actually on offer, as of 2026-08-05.
+
+| | Product | Coverage | Density | Format | Terms | Ask |
+|---|---|---|---|---|---|---|
+| **BW** | LGL `ALS_2` | statewide, 2016–21 campaign | ≥ 8 pts/m² | LAZ, LAS or XYZ-ASCII | licensed **Open Data**; effort-based Service-Entgelt, **min. 60 € + VAT** | `geodaten@lgl.bwl.de` · 0711 95980-200 |
+| **NI** | LGLN Laserscan-Punktwolke (3D-Messdaten) | statewide | ≥ 4 pts/m² | LAZ 1.2, 1 km² tiles | **KOVerm** fee schedule, no public per-km² rate, quote on request; LGLN **AGNB**, not CC BY | `geoService-3D@lgln.niedersachsen.de` |
+| **ST** | LVermGeo 3D-Messdaten | statewide, 6-year cycle | 4–8 pts/m² | LAS 1.2 / LAZ | **190 € je Datensatz**, auf Antrag; DGM and DOM derived from it are sold separately | see below |
+
+Three things are worth noticing across the row.
+
+**Paying does not always mean the data is closed.** BW's `ALS_2` is *open data by licence* —
+the 60 € minimum is a handling charge for cutting and shipping it, not a purchase of rights.
+NI's is the opposite: a different licence (AGNB) from the CC BY its free DGM1 carries. Same
+`€` on the map, quite different downstream.
+
+**None of them has an endpoint, and that is what keeps them out of the downloaders.** Every
+one is an email describing an area — coordinates, a shapefile, or tile names — answered with
+a quote and then a download link or a posted disk. There is no URL to drive, so `las` exits 3
+in all three scripts and says who to write to.
+
+**The free products are not consolation prizes.** BW and NI both give away the DGM1 derived
+from these scans, statewide, and this repo scripts both. If bare earth is what you need, you
+already have it; the cloud buys the returns themselves — classification, echoes, sub-ground
+points. ST is the exception, and the only state where the terrain is on the invoice too.
 
 ## Sachsen-Anhalt: samples, not a state
 
 Sachsen-Anhalt is the one state where a downloader exists but the coverage does not. It is
-listed apart from the thirteen because treating it as "scripted" would overstate what you get.
+green on the maps because LVermGeo will sell the whole state (see
+[The states that sell it](#the-states-that-sell-it)); it is listed apart from the thirteen
+because treating it as "scripted" would overstate what the code here gets you.
 
 LVermGeo publishes the statewide point cloud (`3D-Messdaten`, ALS, 4–8 pts/m², classified,
 LAS 1.2 / PDRF 3) as a **priced, application-only product** — 190 € per Datensatz, "auf
@@ -928,14 +984,18 @@ does drive — would have said Hessen withholds something it does not; the hones
 Hessen publishes everything and this repo simply has nothing to automate. That distinction is
 recorded as the `*` on the map and the § in the README tables, not as a worse colour.
 
-The bar for counting an offline route is deliberately narrow, because it would otherwise
-swallow every "contact us" page in the country. It has to be **free**, cover the **whole
-state**, and have been **actually confirmed** by someone rather than inferred from a
-price list. Hessen clears all three. Sachsen-Anhalt's 190 € "auf Antrag" product clears none of
-them, which is why ST stays orange with a downloader while HE goes green without one. LGLN's
-Laserscan-Punktwolke is the second product to fail the same test — statewide and real, but
-quoted per order (see [Niedersachsen](#niedersachsen-ni)) — and it fails it on the first word:
-free.
+The bar for counting a route without an endpoint is **whole state** and **actually
+established** — a product someone can point at, covering all of it, not a "contact us" page
+and a hope. Hessen clears it, and so do the three states that sell their point cloud. What
+Hessen has that they do not is the price: nothing. That is the whole of the difference between
+`*` and `€`, and it is worth keeping visible, because "free if you post a disk" and "190 € je
+Datensatz" are not the same offer even when both arrive by post.
+
+This bar used to include **free**, which kept ST orange and BW, NI and ST off the coverage
+map's green. That was the wrong cut: it made the maps answer "what can we have for nothing"
+while their legends claimed to answer "what can we have". Price is a caveat on a route, not
+the absence of one, so it moved from the colour to the label. See
+[The states that sell it](#the-states-that-sell-it).
 
 What is *not* claimed here: that no online endpoint exists. HVBG answered a request for the
 point cloud with the postal arrangement rather than a link, which is a strong signal — but it
@@ -1286,9 +1346,11 @@ Published by the **Landesamt für Geoinformation und Landentwicklung Baden-Würt
   (`*.xyz` + a `*.csv` with acquisition date, accuracy and CRS) — so ~37,480 one-km tiles.
 - **CRS:** ETRS89 / UTM Zone 32 — **EPSG:25832**; heights DHHN2016 (compound EPSG:7837).
   The XYZ files themselves carry no CRS; the converter stamps EPSG:25832 on.
-- **No point cloud:** BW publishes no open LiDAR point cloud. The portal's `3DM` /
-  "Laserscandaten 2000–2005" product is flagged inactive and every `3dm_*.zip` URL 404s,
-  so there is no BW counterpart to RP's `las`. `download_bw_lidar.sh las` says so and exits.
+- **The point cloud is not on the portal — it is on the order form.** The `3DM` /
+  "Laserscandaten 2000–2005" entry is flagged inactive and every `3dm_*.zip` URL 404s, and
+  that dead product was read here as "BW has no point cloud". It is not the current one. LGL
+  keeps the laser scan under *Laserscandaten*, in three campaigns, and the middle one covers
+  the whole state — see below. `download_bw_lidar.sh las` still exits: there is no endpoint.
 - **Portal:** <https://opengeodata.lgl-bw.de>.
 
 Other products sit on the same 2 km grid and the same URL scheme (`dom1`, `ndom1`, `dgm025`,
@@ -1322,6 +1384,34 @@ JOBS=12 CONN=4 ./download_bw_lidar.sh dgm1   # tune parallelism
 
 Grid cells are named `<easting_km>-<northing_km>` of the SW corner, with **odd** eastings and
 **even** northings (e.g. `517-5424`) — `BBOX` is inclusive on both ends.
+
+### The point cloud: open data, sold by the hour
+
+BW's laser scan exists, covers the state, and is *licensed open data*. What it does not have
+is a download — you email LGL an area and pay for the work of cutting it. Three campaigns,
+under **Laserscandaten** rather than the dead `3DM` entry:
+
+| | Flown | Coverage | Density | Status |
+|---|---|---|---|---|
+| `ALS_1` | 2000–2005 | statewide | 0.8 pts/m² | **historic** — "wird nicht mehr fortgeführt" |
+| `ALS_2` | 2016–2021 | **statewide** | ≥ 8 pts/m² | the one to ask for |
+| `ALS_3` | 2022–~2029 | in progress, flown areas available since 2023 | ≥ 8 pts/m² | the recapture |
+
+Delivered as **LAZ**, LAS or XYZ-ASCII, classified into seven classes, heights NHN
+(DHHN2016, Höhenstatus 170). Ordering is an email to `geodaten@lgl.bwl.de` (or 0711 95980-200)
+naming the extent — ETRS89/UTM coordinates, a shapefile, or tile names off the Geoportal.
+
+**What it costs is handling, not rights:** *"Die Laserscandaten ALS_3 sind Open Data … Hierfür
+fällt ein aufwandabhängiges Service-Entgelt an. Das Mindestentgelt beträgt 60,- € (zzgl.
+Ust.)."* The same applies to `ALS_2`. So BW is the mildest of the three `€` states — the data
+is open, the invoice is for the labour — and it is why the maps show BW green with a `€`
+rather than red. Checked 2026-08-05:
+[Laserscandaten](https://www.lgl-bw.de/Produkte/3D-Produkte/Laserscandaten/) ·
+[ALS_2](https://www.lgl-bw.de/Produkte/3D-Produkte/Laserscandaten/ALS_2/index.html) ·
+[ALS_3](https://www.lgl-bw.de/Produkte/3D-Produkte/Laserscandaten/ALS_3/index.html).
+
+The free DGM1 above is derived from these scans, so if bare earth is the goal the download
+already covers it.
 
 ## Bayern (BY)
 
@@ -1422,6 +1512,9 @@ straight to the STAC API — unlike every other script, which takes UTM kilometr
 
 ### The point cloud is for sale, not absent
 
+This is why NI is green with a `€` rather than red: the scan can be had for the whole state,
+just never for free and never from a URL.
+
 The open DGM1 is a derived product: LGLN flies an airborne laser scan, classifies it, and
 publishes the 1 m raster it computes from that. The scan itself is a separate, **chargeable**
 product — the *Laserscan-Punktwolke*, one component of LGLN's **3D-Messdaten** alongside the
@@ -1444,12 +1537,11 @@ Product and format description: [Laserscan-Punktwolke (LGLN, Stand
 · [3D-Messdaten](https://www.lgln.niedersachsen.de/startseite/geodaten_karten/3d_geobasisdaten/3d_messdaten/3d-messdaten-142870.html).
 Checked 2026-08-04.
 
-Two consequences. **NI stays dark red on the coverage map and red on the LiDAR map**, because
-this repo's bar for a non-endpoint route is free, statewide and confirmed, and a quotation is
-none of those — the same rule that keeps ST orange with its 190 € Datensatz. And **there is
-nothing for `download_ni_lidar.sh` to do here**: an invoiced, mail-order delivery has no URL
-to drive. If you buy the tiles, they land on the same 1 km grid as the `dgm1` output and drop
-straight into the same tree.
+**There is nothing for `download_ni_lidar.sh` to do here**: an invoiced, mail-order delivery
+has no URL to drive, so `las` exits 3 and names the address to write to. If you do buy the
+tiles, they land on the same 1 km grid as the `dgm1` output and drop straight into the same
+tree. NI is one of three states in this position — see
+[The states that sell it](#the-states-that-sell-it).
 
 Worth knowing before you ask for a quote: this same scan is what LGLN rasterises into the DGM1
 you can already download, and into the sibling `dom` surface model. If bare earth or a surface

@@ -15,9 +15,13 @@
 #          with acquisition date/accuracy. Statewide: ~9,370 ZIPs, ~125 GB (BW publishes no
 #          sizes; this is DRY_RUN=1's extrapolation from sampled tiles, so treat it as ±10%).
 #
-# NOT available: BW publishes no open point cloud. The portal's 3DM / "Laserscandaten"
-# product is flagged inactive and every 3dm_*.zip URL returns 404, so there is no BW
-# equivalent of the RLP `las` dataset (see download_rlp_lidar.sh).
+# NOT downloadable: the point cloud has no endpoint, but it is not missing. The portal's 3DM /
+# "Laserscandaten 2000-2005" entry is flagged inactive and every 3dm_*.zip URL returns 404 --
+# that is the historic ALS_1, not the current scan. LGL keeps the laser scan under
+# Laserscandaten: ALS_2 covers the whole state from the 2016-2021 campaign at >=8 pts/m2, in
+# LAZ/LAS/XYZ, and is licensed Open Data -- what costs money is the cutting and shipping, an
+# effort-based Service-Entgelt with a 60 EUR minimum plus VAT. Ordering is an email naming the
+# extent (geodaten@lgl.bwl.de), so there is nothing for this script to drive.
 #
 # Method  : BW publishes no manifest. The portal draws its 2x2 km download grid as Mapbox
 #           vector tiles whose features carry a JSON blob with the per-tile download URL;
@@ -233,9 +237,20 @@ PY
 case "$DATASET" in
   dgm1) fetch_one "$DATASET" ;;
   las|3dm)
-    echo "ERROR: Baden-Württemberg publishes no open point cloud." >&2
-    echo "       The portal's 3DM/Laserscandaten product is inactive (every 3dm_*.zip 404s)." >&2
-    echo "       Use 'dgm1' here, or download_rlp_lidar.sh las for Rheinland-Pfalz." >&2
+    cat >&2 <<'EOF'
+ERROR: Baden-Württemberg's point cloud has no download endpoint.
+       The portal's 3DM entry is the historic ALS_1 and is inactive (every 3dm_*.zip 404s).
+
+       The current scan is LGL's ALS_2: the whole state from the 2016-2021 campaign,
+       >=8 pts/m2, LAZ/LAS/XYZ, licensed Open Data. You order it by email, naming the
+       extent in ETRS89/UTM coordinates, as a shapefile or as Geoportal tile names, and
+       pay an effort-based Service-Entgelt -- minimum 60 EUR plus VAT:
+
+         geodaten@lgl.bwl.de   0711 95980-200
+         https://www.lgl-bw.de/Produkte/3D-Produkte/Laserscandaten/
+
+       Use 'dgm1' here for the free terrain, which is derived from these same scans.
+EOF
     exit 2 ;;
   *) echo "Usage: $0 [dgm1] [output_dir]" >&2; exit 2 ;;
 esac
