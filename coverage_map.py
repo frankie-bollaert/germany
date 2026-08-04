@@ -5,8 +5,8 @@ One per section of README_download.md, which answers the same questions in prose
 these put the answers on geometry, so a glance replaces a table read.
 
   coverage  can we obtain all four datasets -- point cloud, terrain, plots, house structures?
-            green    all four are obtainable today                                      (10)
-            orange   elevation works, but one of the four is missing at the source        (3)
+            green    all four are obtainable today                                      (11)
+            orange   elevation works, but one of the four is missing at the source        (2)
             red      no bulk LiDAR route -- the state cannot be had whole                 (1)
             darkred  no point cloud, free or paid -- terrain only                         (2)
 
@@ -45,6 +45,12 @@ Both marks sit on the label and each brings its own footnote, drawn only where t
 What is left in the red tiers is genuine absence: HB, where no bulk route of any kind has been
 found, and HH and SH, which neither publish a point cloud nor offer to sell one.
 
+The same reasoning reaches the fourth dataset. HE's Hausumringe are free and statewide behind
+a free gds.hessen.de account, which was scored as missing while a 190 EUR invoice was about to
+be scored as present -- so HOUSES counts it, HE completes all four, and its * (already there
+for the posted hard disk) covers the Downloadcenter too. Only BY and RP are orange now, both
+for the same reason: a cadastre published as a picture.
+
 Red never means "closed" except on the alkis map. All 16 states publish elevation openly, and
 orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre
 as raster, so the download works and the geometry simply is not in it. The legends say so,
@@ -75,9 +81,14 @@ import subprocess
 import sys
 from xml.sax.saxutils import escape
 
-# Scriptable building footprints, from hauskoordinaten-hausumringe.md (probed 2026-07-28).
-# This is the one input the GeoJSON does not carry. "True" means a direct anonymous URL or a
-# feed/WFS a script can drive -- not merely that the data is open.
+# Obtainable building footprints, from hauskoordinaten-hausumringe.md (probed 2026-07-28).
+# This is the one input the GeoJSON does not carry. "True" is the same test the elevation
+# products get: can the whole state be had, by a route someone has established? A direct
+# anonymous URL qualifies, and so does a form to fill in -- what the comment records is which.
+#
+# It used to mean "a script can drive it", which was the wrong question for a map about what
+# can be obtained, and it was inconsistent besides: once a 190 EUR invoice counts for a point
+# cloud, a free registration cannot disqualify a footprint. Only "he" turned on that change.
 #
 # Note the overlap that makes the green tier bigger than it looks: ALKIS carries AX_Gebaeude,
 # so any state with full ALKIS already ships footprints inside the parcel package. The states
@@ -89,7 +100,10 @@ HOUSES = {
     "bb": True,   # inside the per-Landkreis ALKIS Shape packages
     "hb": True,   # WFS only (wfs_alkis_hausumringe)
     "hh": True,   # inside the quarterly ALKIS GML
-    "he": False,  # Downloadcenter needs a free account; ALKIS API exposes parcels, not buildings
+    "he": True,   # HU free and statewide from the gds.hessen.de Downloadcenter, behind a free
+                  # account. No endpoint: HE's INSPIRE OGC API is cp:CadastralParcel, parcels
+                  # only, so the ALKIS run does not bring buildings along the way it does for
+                  # bb/sl/sh/hh. Registration is the whole of the friction -- see HOUSES_NOTE.
     "mv": True,   # dedicated Hausumringe Atom -> hu-mv.zip
     "ni": True,   # priced as HU, but footprints come via the ALKIS gebaeude WFS
     "nw": True,   # gru_vereinfacht GeoPackage per Kreis + gebref
@@ -101,6 +115,13 @@ HOUSES = {
     "th": True,   # inside the per-Flur ALKIS Shape/NAS packages (standalone HU/HK are
                   # CAPTCHA-gated, but that is a second route, not the only one)
 }
+
+# Where a footprint route is obtainable but awkward, the tooltip says how -- green should not
+# read as "anonymous download" when it is not one.
+HOUSES_NOTE = {
+    "he": "houses: free gds.hessen.de account, Downloadcenter Shape, annual — no endpoint",
+}
+
 # th used to be False here, justified by the standalone HU/HK products being CAPTCHA-gated and
 # by th landing red anyway for want of bulk elevation. Both halves are gone: download_th_lidar.sh
 # fetches the elevation, and "inside the ALKIS package" is exactly what already counts as True
@@ -222,6 +243,8 @@ def classify_coverage(props, key):
     if missing:
         detail += f" (missing: {', '.join(missing)})"
     detail += paid_suffix(props)
+    if key in HOUSES_NOTE:
+        detail += f". {HOUSES_NOTE[key]}"
     if not missing:
         return "full", detail
     # Order matters: a state with no elevation route at all has no point cloud either, and its

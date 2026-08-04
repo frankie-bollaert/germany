@@ -118,7 +118,7 @@ RP's is a delivery restriction, not a legal one, and is the likelier of the two 
 
 # 3. Complete coverage — all four datasets
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, BW, MV, NI, NW, SL, SN, ST, TH) for all four datasets, with BW, NI and ST marked € because their point cloud is bought rather than downloaded; orange (BY, HE, RP) for one missing; light red (HB) for no bulk LiDAR route; dark red (HH, SH) for no point cloud on any terms" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, BW, HE, MV, NI, NW, SL, SN, ST, TH) for all four datasets, with BW, NI and ST marked € because their point cloud is bought rather than downloaded and HE starred because none of its four arrives through an endpoint; orange (BY, RP) for one missing; light red (HB) for no bulk LiDAR route; dark red (HH, SH) for no point cloud on any terms" width="560">
 
 | ID | State | Point cloud | DTM (DGM1) | Plots (Flurstücke) | House structures |
 |----|-------|-------------|------------|--------------------|------------------|
@@ -128,7 +128,7 @@ RP's is a delivery restriction, not a legal one, and is the likelier of the two 
 | **BB** | Brandenburg | ✅ `download_bb_lidar.sh` | ✅ same | ✅ `download_alkis.sh bb` — NAS/Shape, 18 Landkreise | ✅ inside that same ALKIS package |
 | **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
 | **HH** | Hamburg | ❌ none published, none for sale | ✅ `download_hh_lidar.sh` — 9 vintages, CKAN API for the file list | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
-| **HE** | Hessen | ✅ § statewide laser scan, copied onto a hard disk you post to HVBG | ✅ § free `gds.hessen.de` storefront — a zero-price cart, no static index | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
+| **HE** | Hessen | ✅ § statewide laser scan, copied onto a hard disk you post to HVBG | ✅ § free `gds.hessen.de` storefront — a zero-price cart, no static index | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ✅ § HU free and statewide, behind a free `gds.hessen.de` account |
 | **MV** | Mecklenburg-Vorpommern | ✅ `download_mv_lidar.sh` | ✅ same | ✅ `download_alkis.sh mv` — NAS + Shape, 724 Gemeinden | ✅ that package, plus a dedicated HU Atom ZIP |
 | **NI** | Niedersachsen | ✅ € the ALS cloud sold as 3D-Messdaten; STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **NW** | Nordrhein-Westfalen | ✅ `download_nrw_lidar.sh` † | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |

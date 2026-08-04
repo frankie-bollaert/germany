@@ -483,18 +483,20 @@ Sections 2 and 3 each answer one dataset at a time. This one answers the crossin
 footprints?** Footprint sources are detailed in
 [`cadastre-products.md`](cadastre-products.md#3-open-data-equivalents-per-bundesland).
 
-**Ten states: BB, BE, BW, MV, NI, NW, SL, SN, ST, TH** — seven of them free end to end, and
-three (BW, NI, ST) only because a point cloud you buy still counts as a point cloud you can
-have.
+**Eleven states: BB, BE, BW, HE, MV, NI, NW, SL, SN, ST, TH** — seven of them free and
+scriptable end to end, three (BW, NI, ST) because a point cloud you buy still counts as one
+you can have, and HE because a form is not a locked door either.
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, BW, MV, NI, NW, SL, SN, ST, TH) for all four datasets, with BW, NI and ST marked € because their point cloud is bought rather than downloaded; orange (BY, HE, RP) for one missing; light red (HB) for no bulk LiDAR route; dark red (HH, SH) for no point cloud on any terms" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, BW, HE, MV, NI, NW, SL, SN, ST, TH) for all four datasets, with BW, NI and ST marked € because their point cloud is bought rather than downloaded and HE starred because none of its four arrives through an endpoint; orange (BY, RP) for one missing; light red (HB) for no bulk LiDAR route; dark red (HH, SH) for no point cloud on any terms" width="560">
 
-Both the ten and the six that fall short are tabulated in
+Both the eleven and the five that fall short are tabulated in
 [README.md §3](README.md#3-complete-coverage--all-four-datasets).
 
-Footprints are never a separate fetch in these ten: ALKIS carries `AX_Gebaeude`, so the
-parcel download brings them along. The extra products in the last column are convenience —
-smaller, simpler files than a full NAS package for anyone who wants only footprints.
+Footprints are rarely a separate fetch: ALKIS carries `AX_Gebaeude`, so in most of the eleven
+the parcel download brings them along. HE is the exception — its INSPIRE OGC API serves
+`cp:CadastralParcel`, parcels only, so its Hausumringe come from the Downloadcenter instead.
+The extra products in the last column are convenience — smaller, simpler files than a full
+NAS package for anyone who wants only footprints.
 
 **TH joined this list on 2026-08-03**, and only the elevation half changed: its cadastre was
 always scriptable. The point cloud and terrain turned out to be published through three
@@ -533,11 +535,15 @@ supply gap: **HH and SH** neither publish a point cloud nor offer to sell one, s
 nothing to fetch and nothing to buy, even though both have working DGM1 downloaders. The
 LiDAR map below ranks them the same way, for the same reason.
 
-**HE left light red on 2026-08-04 without anyone writing code**, which is what "a route
-appears" looks like in practice: HVBG will copy the statewide laser scan onto a hard disk you
-post them, so Hessen's elevation is now obtainable in full and only its footprints are missing
-— an orange state, one dataset short. It carries a `*` on the map because none of that comes
-through an endpoint. See [Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
+**HE went light red → orange → green in two days, without anyone writing code**, which is
+what "a route appears" looks like in practice. On 2026-08-04 HVBG confirmed it will copy the
+statewide laser scan onto a hard disk you post them, which fixed the elevation half and left
+footprints as the last gap. On 2026-08-05 that gap went too: the Hausumringe are free and
+statewide from the `gds.hessen.de` Downloadcenter, and the free account they sit behind is
+friction, not a closed door — the same judgement that had just let three states in on a price
+list. Hessen is now the one state where all four datasets are obtainable and **none of them
+comes through an endpoint**, which is exactly what its `*` says. See
+[Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
 `bundeslaender.geojson`, so they follow the data rather than the README.md tables. Regenerate all
@@ -545,32 +551,32 @@ three with `./coverage_map.py all` after any coverage change; the script writes 
 and a `.png` per map, same image either way, but only the vector one carries a per-state
 tooltip.
 
-## Why the other six fall short
+## Why the other five fall short
 
-The six are the rest of the table in
-[README.md §3](README.md#3-complete-coverage--all-four-datasets) — same columns as the ten,
+The five are the rest of the table in
+[README.md §3](README.md#3-complete-coverage--all-four-datasets) — same columns as the eleven,
 so the gaps line up against them.
 
-Every one of the six has open, scriptable **parcels**. The gaps cluster: RP and BY are a
-single content gap each — a rasterised cadastre, with everything else in place. HE is a third
-single-gap state, and the odd one out, because its missing dataset is footprints rather than
-elevation: the Downloadcenter's Hausumringe needs a free account, while its point cloud and
-DGM1 are both obtainable in full. HH and SH have no point cloud on any terms, free or paid,
-which is the only gap on this list that no amount of money closes. That leaves HB, where no
-bulk elevation route of any kind has been identified — not an access restriction, an absence
-of a route. HB, HE, HH and SH additionally have no scriptable standalone footprint product.
+Every one of the five has open, scriptable **parcels** — except BY and RP, which is precisely
+their gap: a rasterised cadastre, everything else in place, one content gap each. HH and SH
+have no point cloud on any terms, free or paid, the only gap on this list that no amount of
+money closes. That leaves HB, where no bulk elevation route of any kind has been identified —
+not an access restriction, an absence of a route. HB, HH and SH additionally have no
+scriptable standalone footprint product.
 
-Three states left this list on 2026-08-05 without publishing anything new: BW, NI and ST all
+Four states left this list on 2026-08-05 without publishing anything new. BW, NI and ST all
 sell their point cloud, and once a purchase counts as a route their four datasets are all
-obtainable. What they carry instead is a `€`.
+obtainable; they carry a `€`. HE's last gap was its Hausumringe, free and statewide behind a
+free `gds.hessen.de` account — which could not stay disqualifying on a map that had just
+started counting a 190 € invoice. It carries the `*` it already had.
 
 ## Fetching all four today
 
 Whole-state, `download_all.sh` covers it — `ONLY=<id> ./download_all.sh all` fetches every
 dataset that state publishes. What has no single command is a *sample*: `download_samples.sh`
 drives only the LiDAR side, because `download_alkis.sh` has no `BBOX` support, so parcels and
-footprints stay per-state or per-package until that lands. For one of the ten states — the
-seven free ones; for BW, NI and ST the point cloud arrives by invoice, not by script:
+footprints stay per-state or per-package until that lands. For one of the eleven states — the
+seven scriptable ones; BW, NI and ST need an order for the point cloud, HE a form for all four:
 
 ```bash
 ONLY=<id> ./download_all.sh all                 # all four datasets, statewide volumes
@@ -1016,6 +1022,14 @@ Practical notes before you post anything:
 - **DGM1 does not need any of this.** It is free in the `gds.hessen.de` storefront, ordered
   through a zero-price cart rather than posted — a separate, online, still-unscripted route.
   That is why HE's DTM column is also ✅ §: obtainable in full, by hand.
+- **Nor do the footprints.** The Hausumringe are free and statewide in the same site's
+  *Downloadcenter* (Shape, ETRS89/UTM32N, updated annually) behind a free customer account —
+  `ViewDownloadcenter-Start` redirects to `ViewRegistration` until you have one. That account
+  is why they were scored as missing until 2026-08-05, and why they no longer are: it is a
+  registration form, not a refusal, and it is a smaller obstacle than the invoices this repo
+  now counts elsewhere. Hessen's ALKIS run will not bring them along — the INSPIRE OGC API is
+  `cp:CadastralParcel`, parcels only — so the Downloadcenter is the route. See
+  [`cadastre-products.md`](cadastre-products.md#hessen--hvbg).
 
 Nothing here is wired into `download_all.sh`, and nothing can be — `ONLY=he ./download_all.sh`
 covers HE's cadastre and stops there. If a disk arrives, its contents join the tree the same
