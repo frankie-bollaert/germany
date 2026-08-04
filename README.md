@@ -5,9 +5,9 @@ per-state notes, the DuckDB loading — is in [`README_download.md`](README_down
 
 Symbols in the availability columns of §1 and §3: ✅ open, and a script here fetches it in
 bulk · ◐ partly — only part of the state, or open but not yet wired in · ⚠️ open, but no bulk
-endpoint found (portal, login or CAPTCHA only) · ❌ not published as open data. In §2's
-*ALKIS as open data* column, ⚠️ instead means no bulk vector parcels — what a script can
-fetch is a raster cadastral map, not parcel geometry.
+endpoint found (portal, login, CAPTCHA — or, in Hessen's case, the post) · ❌ not published
+as open data. In §2's *ALKIS as open data* column, ⚠️ instead means no bulk vector parcels —
+what a script can fetch is a raster cadastral map, not parcel geometry.
 
 # 1. LiDAR / terrain availability
 
@@ -21,7 +21,7 @@ fetch is a raster cadastral map, not parcel geometry.
 | **BB** | Brandenburg | ✅ | ✅ | `download_bb_lidar.sh` | 25833 | DL-DE/BY 2.0 |
 | **HB** | Bremen | ⚠️ | ⚠️ | — | — | — |
 | **HH** | Hamburg | ❌ | ✅ | `download_hh_lidar.sh` (`dgm1`, `dom1`) | 25832 | DL-DE/BY 2.0 |
-| **HE** | Hessen | ⚠️ | ⚠️ | — | 25832 | open, no conditions (since 2022) |
+| **HE** | Hessen | ⚠️ § | ⚠️ | — | 25832 | open, no conditions (since 2022) |
 | **MV** | Mecklenburg-Vorpommern | ✅ | ✅ | `download_mv_lidar.sh` | 25833 | open, attribution required |
 | **NI** | Niedersachsen | ❌ | ✅ | `download_ni_lidar.sh` | 25832 | CC BY 4.0 |
 | **NW** | Nordrhein-Westfalen | ✅ | ✅ | `download_nrw_lidar.sh` † | 25832 | DL-DE/Zero 2.0 |
@@ -34,6 +34,15 @@ fetch is a raster cadastral map, not parcel geometry.
 
 † The two script filenames that do not match their ID — see
 [The state ID](README_download.md#the-state-id).
+
+§ **Hessen will copy the point cloud onto a hard disk you post them.** Confirmed by email with
+HVBG on 2026-08-04. The data is free — it has carried no usage conditions since 2022-02-01 —
+so what the arrangement costs is the disk and the postage. The cell stays ⚠️ rather than ✅
+because a mailing address is not something a script can drive — and unlike HH's 403 listing or
+SH's "empty" FeatureCollection, both of which turned out to be live endpoints read wrongly,
+this one is unlikely to be cleared by better scraping: asked for the point cloud, HVBG offered
+a disk rather than a link. See
+[Hessen: a hard disk in the post](README_download.md#hessen-a-hard-disk-in-the-post).
 
 **ST is the one row where the table and the map disagree on purpose.** It has a downloader,
 but the map keeps it in the portal-only tier because what Sachsen-Anhalt gives away
@@ -96,7 +105,7 @@ RP's is a delivery restriction, not a legal one, and is the likelier of the two 
 | **BB** | Brandenburg | ✅ `download_bb_lidar.sh` | ✅ same | ✅ `download_alkis.sh bb` — NAS/Shape, 18 Landkreise | ✅ inside that same ALKIS package |
 | **HB** | Bremen | ⚠️ no open bulk product identified | ⚠️ same | ✅ `download_alkis.sh hb` — WFS 1.1, single GML | ⚠️ INSPIRE WFS only, not wired into the downloader |
 | **HH** | Hamburg | ❌ no point cloud published | ✅ `download_hh_lidar.sh` — 9 vintages, CKAN API for the file list | ✅ `download_alkis.sh hh` — quarterly "ausgewählte Daten" GML | ⚠️ snapshot-versioned GML/WFS via the Transparenzportal, no stable URL |
-| **HE** | Hessen | ⚠️ Intershop storefront, no static index | ⚠️ same | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
+| **HE** | Hessen | ⚠️ free, but delivered on a hard disk you post to HVBG — no online route offered | ⚠️ Intershop storefront, no static index | ✅ `download_alkis.sh he` — OGC API Features, ~5.0 M parcels | ⚠️ HU free but needs a `gds.hessen.de` account |
 | **MV** | Mecklenburg-Vorpommern | ✅ `download_mv_lidar.sh` | ✅ same | ✅ `download_alkis.sh mv` — NAS + Shape, 724 Gemeinden | ✅ that package, plus a dedicated HU Atom ZIP |
 | **NI** | Niedersachsen | ❌ none published — STAC exposes `dgm1` only | ✅ `download_ni_lidar.sh` — already COG | ✅ `download_alkis.sh ni` — WFS 2.0 NAS, ~6.3 M parcels | ✅ `… ni gebaeude` (standalone HK/HU priced) |
 | **NW** | Nordrhein-Westfalen | ✅ `download_nrw_lidar.sh` † | ✅ same | ✅ `download_alkis.sh nw` — NAS/GPKG, 53 Kreise | ✅ that package, plus `gru_vereinfacht` + `gebref` |

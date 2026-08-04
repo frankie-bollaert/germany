@@ -485,7 +485,7 @@ footprints?** Footprint sources are detailed in
 
 **Seven states: BB, BE, MV, NW, SN, TH, SL.**
 
-<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, HH, SH, ST) for no bulk LiDAR endpoint, dark red (BW, NI) for no point cloud published" width="560">
+<img src="coverage_map.svg" alt="Map of the 16 Bundesländer coloured by coverage: green (BB, BE, MV, NW, SN, SL, TH) for all four datasets, orange (BY, RP) for one missing, light red (HB, HE, ST) for no bulk LiDAR endpoint, dark red (BW, HH, NI, SH) for no point cloud published" width="560">
 
 Both the seven and the nine that fall short are tabulated in
 [README.md §3](README.md#3-complete-coverage--all-four-datasets).
@@ -516,12 +516,13 @@ its point cloud is still **partial** — 13,086 LAZ tiles against a complete 31,
 grid, released campaign by campaign.
 
 The map carries **two shades of red**, because the two ways of ending up without elevation are
-not the same problem. Light red (HB, HE, HH, SH, ST) is a delivery gap: the products exist and
-are open, but no bulk endpoint hands them over, so these states move up the day one appears.
-Dark red (BW, NI) is a source gap — neither publishes a point cloud at all, so there is nothing
-further to fetch however the request is made, even though `download_bw_lidar.sh` and
-`download_ni_lidar.sh` pull their DGM1 without trouble. The LiDAR map below ranks them the same
-way, for the same reason.
+not the same problem. Light red (HB, HE, ST) is a delivery gap: the products exist and are
+open, but no bulk endpoint hands them over, so these states move up the day one appears — with
+the caveat that Hessen's point cloud has no online delivery to fix, only
+[a hard disk in the post](#hessen-a-hard-disk-in-the-post). Dark red (BW, HH, NI, SH) is a
+source gap — none of them publishes a point cloud at all, so there is nothing further to fetch
+however the request is made, even though all four have working DGM1 downloaders. The LiDAR map
+below ranks them the same way, for the same reason.
 
 This map and the two below it are drawn by [`coverage_map.py`](coverage_map.py) from
 `bundeslaender.geojson`, so they follow the data rather than the README.md tables. Regenerate all
@@ -536,10 +537,10 @@ The nine are the rest of the table in
 so the gaps line up against them.
 
 Every one of the nine has open, scriptable **parcels**. The gaps cluster: RP and BY are a
-single content gap each — a rasterised cadastre, with everything else in place. BW and NI
-publish no point cloud at all, so there is nothing further to fetch however you ask. The
-remaining five fail on elevation delivery — portals, CAPTCHAs and order clients, not access
-restrictions — and all four of them (SH, HE, HH, HB) additionally have no scriptable standalone
+single content gap each — a rasterised cadastre, with everything else in place. BW, HH, NI and
+SH publish no point cloud at all, so there is nothing further to fetch however you ask. The
+remaining three fail on elevation delivery — portals, order clients and, in Hessen's case, the
+post, not access restrictions. HB, HE, HH and SH additionally have no scriptable standalone
 footprint product.
 
 ## Fetching all four today
@@ -562,19 +563,27 @@ ONLY=<id> ./download_all.sh all                 # all four datasets, statewide v
 
 **No state gates its LiDAR behind a login** — every one of the 16 publishes it as open data.
 The dividing line is whether an anonymous *bulk* endpoint exists that a script can drive, or
-whether you have to click through an interactive portal.
+whether you have to click through an interactive portal — or, for Hessen's point cloud, post
+a hard disk.
 
 <img src="lidar_map.svg" alt="Map of the 16 Bundesländer coloured by LiDAR availability: green (BB, BE, BY, MV, NW, RP, SL, SN, TH) for point cloud plus terrain, orange (HB, HE, ST) for open data with no bulk endpoint, red (BW, HH, NI, SH) for terrain only" width="560">
 
 Green is the nine states whose elevation a script reaches with both products. Orange is the
-three that publish elevation openly but only through a portal — everything is there, just not
-scriptably. Red is BW, HH, NI and SH, which are scripted and working but publish **no point
+three that publish elevation openly but not scriptably — everything is there, just not through
+an endpoint. Red is BW, HH, NI and SH, which are scripted and working but publish **no point
 cloud at all**, so there is nothing further to fetch however you ask. Regenerate with
 `./coverage_map.py lidar`.
 
 Red is therefore not worse than orange by accident: an orange state is one endpoint away from
 green, while a red state has nothing more to give. HH and SH crossed from orange to red on
 2026-08-04 by gaining a downloader, not by losing anything.
+
+**HE is the orange state least likely to go green by finding an endpoint.** Its point cloud is
+free and statewide, and HVBG will copy it onto a hard disk you post them — publication by
+padded envelope, with nothing in it for a script to drive. HB is orange for having no
+identified bulk product and ST for publishing only two sample areas anonymously; all three are
+"open but not scriptable", by three different routes. See
+[Hessen: a hard disk in the post](#hessen-a-hard-disk-in-the-post).
 
 ST stays orange despite having a downloader: the map is about fetching a *state* in bulk, and
 what Sachsen-Anhalt gives away anonymously is two sample areas — the statewide point cloud is
@@ -874,10 +883,45 @@ evidence so far, that verdict has been wrong four times out of six.
 
 | ID | State | Status | What blocks a script |
 |----|-------|--------|----------------------|
-| **HE** | Hessen | Open since 2022-02-01, no usage conditions. DGM1 free in the Downloadcenter. | Delivery through an Intershop storefront (`gds.hessen.de`); no static index or feed found. Free, but a zero-price cart rather than a directory — automating it is untested. |
+| **HE** | Hessen | Open since 2022-02-01, no usage conditions. DGM1 free in the Downloadcenter; point cloud free **by post** — see [below](#hessen-a-hard-disk-in-the-post). | DGM1 is delivered through an Intershop storefront (`gds.hessen.de`), a zero-price cart rather than a directory; automating it is untested. The point cloud has no online delivery at all. |
 | **HB** | Bremen | No open LiDAR bulk product identified. | — |
 
-If you need one of these, the practical route today is the state's interactive portal.
+If you need one of these, the practical route today is the state's interactive portal — except
+for Hessen's point cloud, which is a padded envelope.
+
+## Hessen: a hard disk in the post
+
+Hessen's point cloud is the one dataset in this repo that arrives by post. HVBG confirmed by
+email on **2026-08-04**: send them a hard disk, they copy the statewide laser scan onto it and
+send it back. The data itself is free — Hessen's geodata has carried **no usage conditions
+since 2022-02-01** — so the cost is the disk and the postage in both directions.
+
+This is why HE keeps a ⚠️ in the point-cloud column rather than being promoted. Every other
+⚠️ in this repo has been a delivery mechanism someone had not yet driven correctly, and four
+of six such verdicts turned out to be wrong — TH's Atom feeds, SL's share, SH's index, HH's
+CKAN API were all sitting in plain sight. Hessen's is a different kind of gap and worth
+stating plainly so nobody spends an afternoon on it: **the offered route is a disk, not a
+URL.** HVBG answered a request for the point cloud with the postal arrangement rather than a
+link, which is a strong signal there is no online delivery to find — though it is their answer
+to one email, not an exhaustive audit of `gds.hessen.de`. If you do turn up a bulk endpoint,
+that is a correction worth making here, in the same spirit as the four above.
+
+Practical notes before you post anything:
+
+- **Size the disk generously.** Hessen is 21,116 km². This repo's measured neighbours put a
+  statewide point cloud at 5.18 TB for Rheinland-Pfalz (19,858 km²) and ~1.52 TB per vintage
+  for Thüringen (16,202 km²) — see [Volumes](#volumes-for-the-scripted-states). That is a wide
+  band, and Hessen's own figure was not quoted, so an 8 TB disk is the safe order of magnitude
+  rather than a verified requirement.
+- **Agree the scope in writing first** — vintages, classification, tiling and format were not
+  established in the exchange, and a disk is an expensive way to discover you got the wrong
+  one.
+- **DGM1 does not need any of this.** It is free in the Downloadcenter and stays a separate,
+  online (if unscripted) route.
+
+Nothing here is wired into `download_all.sh`, and nothing can be. If a disk arrives, its
+contents join the tree the same way any other state's `las` output does — the
+[per-state notes](#per-state-lidar-notes) below cover the layout the other downloaders write.
 
 ## Two UTM zones
 

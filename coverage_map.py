@@ -7,13 +7,13 @@ these put the answers on geometry, so a glance replaces a table read.
   coverage  can we fetch all four datasets -- point cloud, terrain, plots, house structures?
             green    all four are scriptable today                                       (7)
             orange   elevation works, but one of the four is missing at the source        (2)
-            red      no bulk LiDAR endpoint -- open, but portal only                      (5)
-            darkred  no point cloud published at all -- terrain only                      (2)
+            red      no bulk LiDAR endpoint -- open, but portal or post only              (3)
+            darkred  no point cloud published at all -- terrain only                      (4)
 
   lidar     what elevation can a script actually fetch in bulk?
-            green  point cloud + terrain                                                 (7)
-            orange open, but no bulk endpoint -- interactive portal only                 (7)
-            red    terrain only -- the state publishes no point cloud                    (2)
+            green  point cloud + terrain                                                 (9)
+            orange open, but no bulk endpoint -- portal, or a hard disk in the post       (3)
+            red    terrain only -- the state publishes no point cloud                     (4)
 
   alkis     what does the state's cadastre actually contain?
             green  full vector ALKIS ohne Eigentuemer                                   (14)
@@ -24,8 +24,14 @@ Colour is per-map, not per-tier, because "worst" is a different question on each
 the only map with four tiers: it splits red so that a state we merely cannot reach in bulk is
 not painted the same as one with nothing left to reach for. The lidar map draws the same
 distinction with the colours it has, which is why its red and orange read as inverted next to
-the alkis map -- a portal state still has every product, just not scriptably, while BW and NI
-publish no point cloud however you ask, and that is the deeper red on the coverage map.
+the alkis map -- an unscriptable state still has every product, just not through an endpoint,
+while BW, HH, NI and SH publish no point cloud however you ask, and that is the deeper red on
+the coverage map.
+
+Orange on the lidar map is not one story. HB has no identified bulk product, ST publishes two
+sample areas out of a state, and HE will copy its point cloud onto a hard disk you post to
+HVBG -- free, but not a URL. Only the first two can be cleared by finding an endpoint; see
+"Hessen: a hard disk in the post" in README_download.md.
 
 Red never means "closed" except on the alkis map. All 16 states publish elevation openly, and
 orange on the alkis map is likewise not a delivery problem: BY and RP publish their cadastre

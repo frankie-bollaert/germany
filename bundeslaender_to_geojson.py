@@ -25,7 +25,7 @@ import tempfile
 VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
           "vg2500_12-31.utm32s.gpkg.zip")
 
-# Coverage as recorded in README_download.md (verified live 2026-07-28).
+# Coverage as recorded in README_download.md (verified live 2026-08-04).
 # Those two documents remain the prose source of truth; this is their machine-readable form.
 #
 #   lidar_dgm1 / lidar_las : does the state publish it openly at all
@@ -38,14 +38,20 @@ VG2500 = ("https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/"
 #                            exact | tile | flur | gemeinde | gemarkung | package | none
 COVERAGE = {
     "sh": dict(name_short="Schleswig-Holstein",
-               lidar_dgm1=True, lidar_las=False, lidar_script=None, lidar_bbox=None,
-               lidar_note="gaialight app; overview.php returns an empty FeatureCollection "
-                          "without the app's internal filter state. No point cloud published.",
+               lidar_dgm1=True, lidar_las=False, lidar_script="download_sh_lidar.sh",
+               lidar_bbox=True,
+               lidar_note="GeoJSON tile index of 18,685 DGM1 tiles, each with a direct link; "
+                          "ASCII XYZ, ~515 GB statewide. About 1.7% of index entries are stale "
+                          "and the portal serves an error body for them. No point cloud "
+                          "published.",
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "hh": dict(name_short="Hamburg",
-               lidar_dgm1=True, lidar_las=False, lidar_script=None, lidar_bbox=None,
-               lidar_note="daten-hamburg.de returns 403 on directory listings, so tiles are "
-                          "reachable only by exact known URL. No point cloud found.",
+               lidar_dgm1=True, lidar_las=False, lidar_script="download_hh_lidar.sh",
+               lidar_bbox=True,
+               lidar_note="Directory listings 403, but the archives themselves are anonymous "
+                          "and honour Range; the file list comes from the Transparenzportal "
+                          "CKAN API. DGM1 in 9 vintages (2022 is GeoTIFF, earlier XYZ) plus "
+                          "the image-derived bDOM. No point cloud published.",
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "ni": dict(name_short="Niedersachsen",
                lidar_dgm1=True, lidar_las=False, lidar_script="download_ni_lidar.sh",
@@ -59,10 +65,17 @@ COVERAGE = {
                lidar_dgm1=True, lidar_las=True, lidar_script="download_nrw_lidar.sh",
                lidar_bbox=True, lidar_note=None,
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
+    # lidar_las flipped to True on 2026-08-04, without moving HE on either map. The field says
+    # the state publishes the product, not that this repo can fetch it -- and HVBG confirmed by
+    # email that the point cloud is available to anyone who posts them a hard disk, free, the
+    # data being open since 2022. That is publication, so False was wrong. It is not an
+    # endpoint, so lidar_script stays None and HE stays orange. Same shape as st, minus the
+    # price. See "Hessen: a hard disk in the post" in README_download.md.
     "he": dict(name_short="Hessen",
-               lidar_dgm1=True, lidar_las=False, lidar_script=None, lidar_bbox=None,
-               lidar_note="Delivery through an Intershop storefront (gds.hessen.de); no static "
-                          "index or feed found. DGM1 itself is free.",
+               lidar_dgm1=True, lidar_las=True, lidar_script=None, lidar_bbox=None,
+               lidar_note="Point cloud is free but ships on a hard disk you post to HVBG -- no "
+                          "endpoint, so no script. DGM1 is free too, through an Intershop "
+                          "storefront (gds.hessen.de) with no static index or feed.",
                alkis="full", alkis_engine="ogcapi", alkis_spatial="exact"),
     "rp": dict(name_short="Rheinland-Pfalz",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_rlp_lidar.sh",
@@ -79,17 +92,13 @@ COVERAGE = {
                lidar_bbox=True, lidar_note=None,
                alkis="partial", alkis_engine="aria2", alkis_spatial="package"),
     # The 2025 laser scan is open and statewide in the LVGL Nextcloud share, DGM1 and DOM1
-    # alongside it. lidar_dgm1=True says the STATE publishes terrain openly, which it does --
-    # but download_sl_lidar.sh currently fetches the point cloud only, so the green tier
-    # overstates the repo by one product. The map has no way to say "one of two wired in":
-    # lidar_dgm1=False would paint sl red, and red on this map means "no point cloud
-    # published", which is flatly wrong. Green plus this note is the least misleading of the
-    # three available answers.
+    # alongside it. All three are now wired into download_sl_lidar.sh, so the green tier no
+    # longer overstates the repo -- the caveat that used to live here is gone.
     "sl": dict(name_short="Saarland",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_sl_lidar.sh",
                lidar_bbox=True,
-               lidar_note="Point cloud is scripted; DGM1/DOM1 are open in the same LVGL share "
-                          "(laz and GeoTIFF) but not yet wired into the downloader.",
+               lidar_note="Point cloud, DGM1 and DOM1 are all scripted out of the public LVGL "
+                          "Nextcloud share (laz and GeoTIFF, one ZIP per Landkreis).",
                alkis="full", alkis_engine="aria2", alkis_spatial="package"),
     "be": dict(name_short="Berlin",
                lidar_dgm1=True, lidar_las=True, lidar_script="download_be_lidar.sh",
